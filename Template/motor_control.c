@@ -53,6 +53,7 @@ void motor_control_init(void)
 {
     /* enable GPIO clocks */
     rcu_periph_clock_enable(RCU_GPIOA);
+    rcu_periph_clock_enable(RCU_GPIOB);
     rcu_periph_clock_enable(RCU_GPIOC);
     
     /* enable TIMER clock for PWM */
@@ -62,17 +63,18 @@ void motor_control_init(void)
     gpio_init(MOTOR_ENABLE_PORT, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, MOTOR_ENABLE_PIN);
     gpio_bit_reset(MOTOR_ENABLE_PORT, MOTOR_ENABLE_PIN);
     
-    /* configure H-bridge control pins */
-    gpio_init(HIN1_PORT, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, HIN1_PIN);
-    gpio_init(LIN1_PORT, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, LIN1_PIN);
-    gpio_init(HIN2_PORT, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, HIN2_PIN);
-    gpio_init(LIN2_PORT, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, LIN2_PIN);
+    /* enable AF clock */
+    rcu_periph_clock_enable(RCU_AF);
     
-    /* reset all control pins */
-    gpio_bit_reset(HIN1_PORT, HIN1_PIN);
-    gpio_bit_reset(LIN1_PORT, LIN1_PIN);
-    gpio_bit_reset(HIN2_PORT, HIN2_PIN);
-    gpio_bit_reset(LIN2_PORT, LIN2_PIN);
+    /* configure H-bridge control pins as alternate function for PWM */
+    // HIN1 (PB14) - TIMER1_CH3
+    gpio_init(HIN1_PORT, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, HIN1_PIN);
+    // LIN1 (PA9) - TIMER1_CH2
+    gpio_init(LIN1_PORT, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, LIN1_PIN);
+    // HIN2 (PB13) - TIMER1_CH1N
+    gpio_init(HIN2_PORT, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, HIN2_PIN);
+    // LIN2 (PA8) - TIMER1_CH1
+    gpio_init(LIN2_PORT, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, LIN2_PIN);
     
     /* configure TIMER1 for PWM */
     timer_oc_parameter_struct timer_ocinitpara;
@@ -89,24 +91,35 @@ void motor_control_init(void)
     timer_initpara.repetitioncounter = 0;
     timer_init(TIMER1, &timer_initpara);
     
-    /* CH0, CH1 configuration in PWM mode */
+    /* CH0, CH1, CH2, CH3 configuration in PWM mode */
     timer_ocinitpara.outputstate  = TIMER_CCX_ENABLE;
-    timer_ocinitpara.outputnstate = TIMER_CCXN_DISABLE;
+    timer_ocinitpara.outputnstate = TIMER_CCXN_ENABLE; // Enable complementary output for CH1N
     timer_ocinitpara.ocpolarity   = TIMER_OC_POLARITY_HIGH;
     timer_ocinitpara.ocnpolarity  = TIMER_OCN_POLARITY_HIGH;
     timer_ocinitpara.ocidlestate  = TIMER_OC_IDLE_STATE_LOW;
     timer_ocinitpara.ocnidlestate = TIMER_OCN_IDLE_STATE_LOW;
     
+    // Configure all channels
     timer_channel_output_config(TIMER1, TIMER_CH_0, &timer_ocinitpara);
     timer_channel_output_config(TIMER1, TIMER_CH_1, &timer_ocinitpara);
+    timer_channel_output_config(TIMER1, TIMER_CH_2, &timer_ocinitpara);
+    timer_channel_output_config(TIMER1, TIMER_CH_3, &timer_ocinitpara);
     
-    /* CH0, CH1 configuration in PWM mode0 */
-    timer_channel_output_pulse_value_config(TIMER1, TIMER_CH_0, 0);
-    timer_channel_output_pulse_value_config(TIMER1, TIMER_CH_1, 0);
+    /* CH0, CH1, CH2, CH3 configuration in PWM mode0 */
+    timer_channel_output_pulse_value_config(TIMER1, TIMER_CH_0, 0);  // LIN2 (PA8)
+    timer_channel_output_pulse_value_config(TIMER1, TIMER_CH_1, 0);  // HIN2 (PB13) - complementary
+    timer_channel_output_pulse_value_config(TIMER1, TIMER_CH_2, 0);  // LIN1 (PA9)
+    timer_channel_output_pulse_value_config(TIMER1, TIMER_CH_3, 0);  // HIN1 (PB14)
+    
     timer_channel_output_mode_config(TIMER1, TIMER_CH_0, TIMER_OC_MODE_PWM0);
     timer_channel_output_mode_config(TIMER1, TIMER_CH_1, TIMER_OC_MODE_PWM0);
+    timer_channel_output_mode_config(TIMER1, TIMER_CH_2, TIMER_OC_MODE_PWM0);
+    timer_channel_output_mode_config(TIMER1, TIMER_CH_3, TIMER_OC_MODE_PWM0);
+    
     timer_channel_output_shadow_config(TIMER1, TIMER_CH_0, TIMER_OC_SHADOW_DISABLE);
     timer_channel_output_shadow_config(TIMER1, TIMER_CH_1, TIMER_OC_SHADOW_DISABLE);
+    timer_channel_output_shadow_config(TIMER1, TIMER_CH_2, TIMER_OC_SHADOW_DISABLE);
+    timer_channel_output_shadow_config(TIMER1, TIMER_CH_3, TIMER_OC_SHADOW_DISABLE);
     
     /* auto-reload preload enable */
     timer_auto_reload_shadow_enable(TIMER1);

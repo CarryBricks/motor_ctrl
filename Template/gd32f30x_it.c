@@ -144,11 +144,6 @@ void SysTick_Handler(void)
 
 
 
-// 外部变量声明
-extern uint8_t modbus_rx_buffer[];
-extern uint16_t modbus_rx_length;
-extern uint32_t modbus_rx_timeout;
-
 // 外部函数声明
 extern void hall_sensor_update(void);
 
@@ -185,25 +180,24 @@ void EXTI1_IRQHandler(void)
 }
 
 /*!
-    \brief      This function handles USART0 interrupt request.
+    \brief      This function handles EXTI10_15 interrupt request.
     \param[in]  none
     \param[out] none
     \retval     none
 */
-void USART0_IRQHandler(void)
+void EXTI10_15_IRQHandler(void)
 {
-    if(usart_flag_get(USART0, USART_FLAG_RBNE)){
-        /* read data from USART0 */
-        uint8_t data = usart_data_receive(USART0);
-        
-        // 处理Modbus数据接收
-        if (modbus_rx_length < MODBUS_BUFFER_SIZE) {
-            modbus_rx_buffer[modbus_rx_length++] = data;
-            modbus_rx_timeout = 0; // 重置超时计数器
-        }
+    if(exti_flag_get(EXTI_6)){
+        /* update hall sensor state */
+        hall_sensor_update();
+        /* clear the EXTI6 pending bit */
+        exti_flag_clear(EXTI_6);
     }
     
-    if(usart_flag_get(USART0, USART_FLAG_TBE)){
-        // 发送数据处理
+    if(exti_flag_get(EXTI_7)){
+        /* update hall sensor state */
+        hall_sensor_update();
+        /* clear the EXTI7 pending bit */
+        exti_flag_clear(EXTI_7);
     }
 }

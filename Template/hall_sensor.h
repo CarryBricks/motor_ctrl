@@ -32,23 +32,21 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSI
 OF SUCH DAMAGE.
 */
 
-#ifndef HALL_SENSOR_H
-#define HALL_SENSOR_H
+#ifndef __HALL_SENSOR_H__
+#define __HALL_SENSOR_H__
 
 #include "gd32f30x.h"
 
-// 硬件定义
-#define HALL_EA_PIN          GPIO_PIN_0
-#define HALL_EA_PORT         GPIOB
-#define HALL_EB_PIN          GPIO_PIN_1
-#define HALL_EB_PORT         GPIOB
+#define HALL_EA_PORT          GPIOB
+#define HALL_EA_PIN           GPIO_PIN_6
+#define HALL_EB_PORT          GPIOB
+#define HALL_EB_PIN           GPIO_PIN_7
 
-// 函数声明
-void hall_sensor_init(void);
-void hall_sensor_process(void);
-
-// 外部变量声明
 extern volatile uint32_t hall_count;
 extern volatile uint16_t actual_speed;
 
-#endif /* HALL_SENSOR_H */
+void hall_sensor_init(void);
+void hall_sensor_process(void);
+void hall_sensor_update(void);
+
+#endif

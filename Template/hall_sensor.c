@@ -34,12 +34,13 @@ OF SUCH DAMAGE.
 
 #include "hall_sensor.h"
 #include "motor_control.h"
-#include "stroke_counter.h"
+
+// 外部变量声明
+extern volatile uint32_t system_tick;
 
 // 全局变量
 volatile uint32_t hall_count = 0;
 volatile uint16_t actual_speed = 0;
-volatile uint32_t system_tick = 0;
 
 // 局部变量
 static uint8_t last_hall_state = 0;
@@ -67,18 +68,17 @@ void hall_sensor_init(void)
     rcu_periph_clock_enable(RCU_AF);
     
     /* connect EXTI line to Hall sensor pins */
-    gpio_exti_source_select(GPIO_PORT_SOURCE_GPIOB, GPIO_PIN_SOURCE_0);
-    gpio_exti_source_select(GPIO_PORT_SOURCE_GPIOB, GPIO_PIN_SOURCE_1);
+    gpio_exti_source_select(GPIO_PORT_SOURCE_GPIOB, GPIO_PIN_SOURCE_6);
+    gpio_exti_source_select(GPIO_PORT_SOURCE_GPIOB, GPIO_PIN_SOURCE_7);
     
     /* configure EXTI line */
-    exti_init(EXTI_0, EXTI_INTERRUPT, EXTI_TRIG_BOTH);
-    exti_init(EXTI_1, EXTI_INTERRUPT, EXTI_TRIG_BOTH);
-    exti_interrupt_flag_clear(EXTI_0);
-    exti_interrupt_flag_clear(EXTI_1);
+    exti_init(EXTI_6, EXTI_INTERRUPT, EXTI_TRIG_BOTH);
+    exti_init(EXTI_7, EXTI_INTERRUPT, EXTI_TRIG_BOTH);
+    exti_interrupt_flag_clear(EXTI_6);
+    exti_interrupt_flag_clear(EXTI_7);
     
     /* enable and set EXTI interrupt to the lowest priority */
-    nvic_irq_enable(EXTI0_IRQn, 2U, 0U);
-    nvic_irq_enable(EXTI1_IRQn, 2U, 0U);
+    nvic_irq_enable(EXTI10_15_IRQn, 2U, 0U);
 }
 
 /*!
@@ -122,8 +122,5 @@ void hall_sensor_update(void)
         hall_count++;
         hall_count_in_interval++;
         last_hall_state = current_state;
-        
-        /* update stroke counter */
-        stroke_counter_update();
     }
 }

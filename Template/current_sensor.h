@@ -37,16 +37,27 @@ OF SUCH DAMAGE.
 
 #include "gd32f30x.h"
 
-// 硬件定义
-#define CURRENT_ADC_CHANNEL  ADC_CHANNEL_0
-#define CURRENT_ADC_PORT     GPIOA
-#define CURRENT_ADC_PIN      GPIO_PIN_0
+// 硬件定义 - 电流检测使用PA5和PA6两路ADC
+#define CURRENT_ADC1_CHANNEL  ADC_CHANNEL_5
+#define CURRENT_ADC1_PORT     GPIOA
+#define CURRENT_ADC1_PIN      GPIO_PIN_5
+
+#define CURRENT_ADC2_CHANNEL  ADC_CHANNEL_6
+#define CURRENT_ADC2_PORT     GPIOA
+#define CURRENT_ADC2_PIN      GPIO_PIN_6
 
 // 函数声明
 void current_sensor_init(void);
 uint16_t read_motor_current(void);
+void check_stall_current(void);
 
 // 外部变量声明
 extern volatile uint16_t current_value;
+extern volatile uint16_t current_adc1_value;
+extern volatile uint16_t current_adc2_value;
+
+// 电流阈值定义
+#define OVERLOAD_CURRENT_THRESHOLD    3000    // 过载电流阈值 (mA)
+#define STALL_CURRENT_THRESHOLD       4000    // 堵转电流阈值 (mA)
 
 #endif /* CURRENT_SENSOR_H */

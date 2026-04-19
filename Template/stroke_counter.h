@@ -38,8 +38,10 @@ OF SUCH DAMAGE.
 #include "gd32f30x.h"
 
 // 到位检测引脚定义
-#define STROKE_POSITION_DETECT_PIN    GPIO_PIN_2
-#define STROKE_POSITION_DETECT_PORT   GPIOB
+#define TOP_POSITION_DETECT_PIN    GPIO_PIN_5
+#define TOP_POSITION_DETECT_PORT   GPIOB
+#define BOTTOM_POSITION_DETECT_PIN    GPIO_PIN_4
+#define BOTTOM_POSITION_DETECT_PORT   GPIOB
 
 // 函数声明
 void stroke_counter_init(void);
@@ -49,5 +51,7 @@ void stroke_counter_reset(void);
 // 外部变量声明
 extern volatile uint32_t stroke_count;
 extern volatile uint8_t position_detected;
+extern volatile uint8_t top_position_detected;
+extern volatile uint8_t bottom_position_detected;
 
 #endif /* STROKE_COUNTER_H */

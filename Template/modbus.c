@@ -51,6 +51,30 @@ static void modbus_handle_read_holding_registers(uint8_t *rx_buffer, uint16_t rx
 static void modbus_handle_write_single_register(uint8_t *rx_buffer, uint16_t rx_length);
 
 /*!
+    \brief      This function handles USART1 interrupt request.
+    \param[in]  none
+    \param[out] none
+    \retval     none
+*/
+void USART1_IRQHandler(void)
+{
+    if(usart_flag_get(USART1, USART_FLAG_RBNE)){
+        /* read data from USART1 */
+        uint8_t data = usart_data_receive(USART1);
+        
+        // 处理Modbus数据接收
+        if (modbus_rx_length < MODBUS_BUFFER_SIZE) {
+            modbus_rx_buffer[modbus_rx_length++] = data;
+            modbus_rx_timeout = 0; // 重置超时计数器
+        }
+    }
+    
+    if(usart_flag_get(USART1, USART_FLAG_TBE)){
+        // 发送数据处理
+    }
+}
+
+/*!
     \brief      Modbus initialization
     \param[in]  none
     \param[out] none
@@ -62,29 +86,29 @@ void modbus_init(void)
     rcu_periph_clock_enable(RCU_GPIOA);
     
     /* enable USART clock */
-    rcu_periph_clock_enable(RCU_USART0);
+    rcu_periph_clock_enable(RCU_USART1);
     
-    /* configure USART GPIO */
-    gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_9);
-    gpio_init(GPIOA, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_10);
+    /* configure USART GPIO - PA2 (TX), PA3 (RX) */
+    gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_2);
+    gpio_init(GPIOA, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_3);
     
     /* configure USART */
-    usart_deinit(USART0);
-    usart_baudrate_set(USART0, 9600U);
-    usart_word_length_set(USART0, USART_WL_8BIT);
-    usart_stop_bit_set(USART0, USART_STB_1BIT);
-    usart_parity_config(USART0, USART_PM_NONE);
-    usart_hardware_flow_cts_config(USART0, USART_CTS_DISABLE);
-    usart_hardware_flow_rts_config(USART0, USART_RTS_DISABLE);
-    usart_receive_config(USART0, USART_RECEIVE_ENABLE);
-    usart_transmit_config(USART0, USART_TRANSMIT_ENABLE);
+    usart_deinit(USART1);
+    usart_baudrate_set(USART1, 115200U);
+    usart_word_length_set(USART1, USART_WL_8BIT);
+    usart_stop_bit_set(USART1, USART_STB_1BIT);
+    usart_parity_config(USART1, USART_PM_NONE);
+    usart_hardware_flow_cts_config(USART1, USART_CTS_DISABLE);
+    usart_hardware_flow_rts_config(USART1, USART_RTS_DISABLE);
+    usart_receive_config(USART1, USART_RECEIVE_ENABLE);
+    usart_transmit_config(USART1, USART_TRANSMIT_ENABLE);
     
     /* enable USART */
-    usart_enable(USART0);
+    usart_enable(USART1);
     
     /* enable USART receive interrupt */
-    usart_interrupt_enable(USART0, USART_INT_RBNE);
-    nvic_irq_enable(USART0_IRQn, 1U, 0U);
+    usart_interrupt_enable(USART1, USART_INT_RBNE);
+    nvic_irq_enable(USART1_IRQn, 1U, 0U);
 }
 
 /*!
@@ -159,12 +183,12 @@ void modbus_process(void)
 void modbus_send_response(uint8_t *buffer, uint16_t length)
 {
     for (uint16_t i = 0; i < length; i++) {
-        while(!usart_flag_get(USART0, USART_FLAG_TBE));
-        usart_data_transmit(USART0, buffer[i]);
+        while(!usart_flag_get(USART1, USART_FLAG_TBE));
+        usart_data_transmit(USART1, buffer[i]);
     }
     
     /* wait for transmission complete */
-    while(!usart_flag_get(USART0, USART_FLAG_TC));
+    while(!usart_flag_get(USART1, USART_FLAG_TC));
 }
 
 /*!

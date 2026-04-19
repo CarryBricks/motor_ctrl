@@ -34,9 +34,12 @@ OF SUCH DAMAGE.
 
 #include "current_sensor.h"
 #include "systick.h"
+#include "motor_control.h"
 
 // 全局变量
 volatile uint16_t current_value = 0;
+volatile uint16_t current_adc1_value = 0;
+volatile uint16_t current_adc2_value = 0;
 
 /*!
     \brief      current sensor initialization
@@ -52,8 +55,9 @@ void current_sensor_init(void)
     /* enable ADC clock */
     rcu_periph_clock_enable(RCU_ADC0);
     
-    /* configure ADC GPIO */
-    gpio_init(CURRENT_ADC_PORT, GPIO_MODE_AIN, GPIO_OSPEED_50MHZ, CURRENT_ADC_PIN);
+    /* configure ADC GPIO - PA5 and PA6 */
+    gpio_init(CURRENT_ADC1_PORT, GPIO_MODE_AIN, GPIO_OSPEED_50MHZ, CURRENT_ADC1_PIN);
+    gpio_init(CURRENT_ADC2_PORT, GPIO_MODE_AIN, GPIO_OSPEED_50MHZ, CURRENT_ADC2_PIN);
     
     /* ADC configuration */
     adc_deinit(ADC0);
@@ -68,11 +72,14 @@ void current_sensor_init(void)
     /* ADC data alignment config */
     adc_data_alignment_config(ADC0, ADC_DATAALIGN_RIGHT);
     
-    /* ADC channel length config */
-    adc_channel_length_config(ADC0, ADC_ROUTINE_CHANNEL, 1);
+    /* ADC channel length config - 2 channels */
+    adc_channel_length_config(ADC0, ADC_ROUTINE_CHANNEL, 2);
     
-    /* ADC channel config */
-    adc_routine_channel_config(ADC0, 0, CURRENT_ADC_CHANNEL, ADC_SAMPLETIME_55POINT5);
+    /* ADC channel config - channel 5 (PA5) as first channel */
+    adc_routine_channel_config(ADC0, 0, CURRENT_ADC1_CHANNEL, ADC_SAMPLETIME_55POINT5);
+    
+    /* ADC channel config - channel 6 (PA6) as second channel */
+    adc_routine_channel_config(ADC0, 1, CURRENT_ADC2_CHANNEL, ADC_SAMPLETIME_55POINT5);
     
     /* ADC trigger config */
     adc_external_trigger_source_config(ADC0, ADC_ROUTINE_CHANNEL, ADC0_1_EXTTRIG_ROUTINE_T1_CH1);
@@ -82,7 +89,7 @@ void current_sensor_init(void)
     adc_enable(ADC0);
     delay_1ms(1U);
     
-  /* ADC calibration and reset calibration */
+    /* ADC calibration and reset calibration */
     adc_calibration_enable(ADC0);
     delay_1ms(1U);
 }
@@ -101,8 +108,16 @@ uint16_t read_motor_current(void)
     /* wait for conversion complete */
     while(!adc_flag_get(ADC0, ADC_FLAG_EOC));
     
-    /* read current value */
-    uint16_t adc_value = adc_routine_data_read(ADC0);
+    /* read ADC values - both channels */
+    uint16_t adc1_value = adc_routine_data_read(ADC0);
+    uint16_t adc2_value = adc_routine_data_read(ADC0);
+    
+    /* store individual ADC values */
+    current_adc1_value = adc1_value;
+    current_adc2_value = adc2_value;
+    
+    /* use the average of two channels for current calculation */
+    uint16_t adc_value = (adc1_value + adc2_value) / 2;
     
     /* convert ADC value to current (mA) */
     /* assuming 10mΩ shunt resistor and 30x gain */
@@ -110,5 +125,40 @@ uint16_t read_motor_current(void)
     current = (current * 1000) / (30 * 10); // mA
     
     current_value = current;
+    
+    /* check for stall current */
+    check_stall_current();
+    
     return current;
+}
+
+/*!
+    \brief      check for stall current and stop motor if necessary
+    \param[in]  none
+    \param[out] none
+    \retval     none
+*/
+void check_stall_current(void)
+{
+    /* get motor state */
+    motor_state_t state = motor_state;
+    
+    /* only check if motor is running */
+    if (state == MOTOR_STATE_FORWARD || state == MOTOR_STATE_REVERSE) {
+        /* check both ADC channels for stall current */
+        uint16_t adc1_current = (current_adc1_value * 3300) / 4096; // mV
+        adc1_current = (adc1_current * 1000) / (30 * 10); // mA
+        
+        uint16_t adc2_current = (current_adc2_value * 3300) / 4096; // mV
+        adc2_current = (adc2_current * 1000) / (30 * 10); // mA
+        
+        /* check if either channel exceeds stall threshold */
+        if (adc1_current > STALL_CURRENT_THRESHOLD || adc2_current > STALL_CURRENT_THRESHOLD) {
+            /* stop motor immediately */
+            motor_stop();
+            
+            /* set motor state to stopped */
+            motor_state = MOTOR_STATE_STOP;
+        }
+    }
 }

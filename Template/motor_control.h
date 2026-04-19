@@ -40,13 +40,13 @@ OF SUCH DAMAGE.
 // 硬件定义
 #define MOTOR_ENABLE_PIN     GPIO_PIN_0
 #define MOTOR_ENABLE_PORT    GPIOC
-#define HIN1_PIN             GPIO_PIN_10
-#define HIN1_PORT            GPIOA
-#define LIN1_PIN             GPIO_PIN_11
+#define HIN1_PIN             GPIO_PIN_14
+#define HIN1_PORT            GPIOB
+#define LIN1_PIN             GPIO_PIN_9
 #define LIN1_PORT            GPIOA
-#define HIN2_PIN             GPIO_PIN_12
-#define HIN2_PORT            GPIOA
-#define LIN2_PIN             GPIO_PIN_13
+#define HIN2_PIN             GPIO_PIN_13
+#define HIN2_PORT            GPIOB
+#define LIN2_PIN             GPIO_PIN_8
 #define LIN2_PORT            GPIOA
 
 // 电机状态定义

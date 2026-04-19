@@ -36,6 +36,7 @@ OF SUCH DAMAGE.
 #include "systick.h"
 
 volatile static uint32_t delay;
+volatile uint32_t system_tick = 0;
 
 /*!
     \brief      configure systick
@@ -82,6 +83,5 @@ void delay_decrement(void)
     }
     
     // 更新系统时间
-    extern volatile uint32_t system_tick;
     system_tick++;
 }

@@ -314,7 +314,7 @@
           </ArmAdsMisc>
           <Cads>
             <interw>1</interw>
-            <Optim>2</Optim>
+            <Optim>1</Optim>
             <oTime>0</oTime>
             <SplitLS>0</SplitLS>
             <OneElfS>1</OneElfS>
@@ -326,11 +326,11 @@
             <wLevel>3</wLevel>
             <uThumb>0</uThumb>
             <uSurpInc>0</uSurpInc>
-            <uC99>0</uC99>
+            <uC99>1</uC99>
             <uGnu>0</uGnu>
             <useXO>0</useXO>
             <v6Lang>3</v6Lang>
-            <v6LangP>8</v6LangP>
+            <v6LangP>3</v6LangP>
             <vShortEn>1</vShortEn>
             <vShortWch>1</vShortWch>
             <v6Lto>0</v6Lto>
@@ -428,6 +428,51 @@
               <FileName>modbus.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\modbus.c</FilePath>
+            </File>
+            <File>
+              <FileName>key_button.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\key_button.c</FilePath>
+            </File>
+            <File>
+              <FileName>led_control.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\led_control.c</FilePath>
+            </File>
+            <File>
+              <FileName>hub_reset.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\hub_reset.c</FilePath>
+            </File>
+            <File>
+              <FileName>pwm_test.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\pwm_test.c</FilePath>
+            </File>
+            <File>
+              <FileName>pwm_test_standalone.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\pwm_test_standalone.c</FilePath>
+            </File>
+            <File>
+              <FileName>pwm_test_register.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\pwm_test_register.c</FilePath>
+            </File>
+            <File>
+              <FileName>uart2_test.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\uart2_test.c</FilePath>
+            </File>
+            <File>
+              <FileName>pwm_test_pa0_pa1.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\pwm_test_pa0_pa1.c</FilePath>
+            </File>
+            <File>
+              <FileName>pwm_test_pb13_pb14.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\pwm_test_pb13_pb14.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -1109,6 +1154,51 @@
               <FileType>1</FileType>
               <FilePath>..\modbus.c</FilePath>
             </File>
+            <File>
+              <FileName>key_button.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\key_button.c</FilePath>
+            </File>
+            <File>
+              <FileName>led_control.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\led_control.c</FilePath>
+            </File>
+            <File>
+              <FileName>hub_reset.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\hub_reset.c</FilePath>
+            </File>
+            <File>
+              <FileName>pwm_test.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\pwm_test.c</FilePath>
+            </File>
+            <File>
+              <FileName>pwm_test_standalone.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\pwm_test_standalone.c</FilePath>
+            </File>
+            <File>
+              <FileName>pwm_test_register.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\pwm_test_register.c</FilePath>
+            </File>
+            <File>
+              <FileName>uart2_test.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\uart2_test.c</FilePath>
+            </File>
+            <File>
+              <FileName>pwm_test_pa0_pa1.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\pwm_test_pa0_pa1.c</FilePath>
+            </File>
+            <File>
+              <FileName>pwm_test_pb13_pb14.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\pwm_test_pb13_pb14.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -1788,6 +1878,51 @@
               <FileName>modbus.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\modbus.c</FilePath>
+            </File>
+            <File>
+              <FileName>key_button.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\key_button.c</FilePath>
+            </File>
+            <File>
+              <FileName>led_control.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\led_control.c</FilePath>
+            </File>
+            <File>
+              <FileName>hub_reset.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\hub_reset.c</FilePath>
+            </File>
+            <File>
+              <FileName>pwm_test.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\pwm_test.c</FilePath>
+            </File>
+            <File>
+              <FileName>pwm_test_standalone.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\pwm_test_standalone.c</FilePath>
+            </File>
+            <File>
+              <FileName>pwm_test_register.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\pwm_test_register.c</FilePath>
+            </File>
+            <File>
+              <FileName>uart2_test.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\uart2_test.c</FilePath>
+            </File>
+            <File>
+              <FileName>pwm_test_pa0_pa1.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\pwm_test_pa0_pa1.c</FilePath>
+            </File>
+            <File>
+              <FileName>pwm_test_pb13_pb14.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\pwm_test_pb13_pb14.c</FilePath>
             </File>
           </Files>
         </Group>

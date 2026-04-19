@@ -37,6 +37,8 @@ OF SUCH DAMAGE.
 // 全局变量
 volatile uint32_t stroke_count = 0;
 volatile uint8_t position_detected = 0;
+volatile uint8_t top_position_detected = 0;
+volatile uint8_t bottom_position_detected = 0;
 
 /*!
     \brief      stroke counter initialization
@@ -49,8 +51,11 @@ void stroke_counter_init(void)
     /* enable GPIO clock */
     rcu_periph_clock_enable(RCU_GPIOB);
     
-    /* configure position detect pin */
-    gpio_init(STROKE_POSITION_DETECT_PORT, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, STROKE_POSITION_DETECT_PIN);
+    /* configure top position detect pin */
+    gpio_init(TOP_POSITION_DETECT_PORT, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, TOP_POSITION_DETECT_PIN);
+    
+    /* configure bottom position detect pin */
+    gpio_init(BOTTOM_POSITION_DETECT_PORT, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, BOTTOM_POSITION_DETECT_PIN);
 }
 
 /*!
@@ -64,8 +69,14 @@ void stroke_counter_update(void)
     /* increment stroke count */
     stroke_count++;
     
-    /* check position detection */
-    position_detected = gpio_input_bit_get(STROKE_POSITION_DETECT_PORT, STROKE_POSITION_DETECT_PIN);
+    /* check top position detection */
+    top_position_detected = gpio_input_bit_get(TOP_POSITION_DETECT_PORT, TOP_POSITION_DETECT_PIN);
+    
+    /* check bottom position detection */
+    bottom_position_detected = gpio_input_bit_get(BOTTOM_POSITION_DETECT_PORT, BOTTOM_POSITION_DETECT_PIN);
+    
+    /* set position_detected if either top or bottom is detected */
+    position_detected = top_position_detected || bottom_position_detected;
 }
 
 /*!
