@@ -64,9 +64,9 @@ void pwm_pa0_pa1_init(void)
     /* 7. 启动定时器 */
     timer_enable(TIMER1);
 }
-
-void pwm_pa8_pa9_init(void)
-{
+#if  TEST_OK
+void /spwm_pa8_pa9_init(void)
+{好
     timer_oc_parameter_struct timer_ocpara;
     timer_parameter_struct timerpara;
 
@@ -258,3 +258,5 @@ void pwm_test_duty_adjust(void)
         }
     }
 }
+????????????????
+#endif

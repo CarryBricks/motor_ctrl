@@ -335,7 +335,6 @@ int main(void)
     /* system initialization */
     system_init();
 	
-	
 	 // 简单初始化 UART2
     uart2_simple_init();
     
@@ -344,6 +343,7 @@ int main(void)
 	//while(1);
     
     /* test direct UART before any other initialization */
+    #if 0
     rcu_periph_clock_enable(RCU_GPIOB);
     rcu_periph_clock_enable(RCU_USART2);
     rcu_periph_clock_enable(RCU_AF);
@@ -373,15 +373,14 @@ int main(void)
     
     /* UART2 initialization for printf */
     uart2_init();
-
+  
     //uart2_test_standalone();
-    
     /* simple printf test */
     printf("OK\r\n");
-
+  #endif
     
     /* motor control initialization */
-    motor_control_init();
+    //motor_control_init();
     
     /* current sensor initialization */
     current_sensor_init();
@@ -399,18 +398,18 @@ int main(void)
     modbus_init();
     
     /* print system information */
-    printf("\r\nMotor Control System Initialized");
-    printf("\r\nCK_SYS: %d Hz", rcu_clock_freq_get(CK_SYS));
+    //printf("\r\nMotor Control System Initialized");
+    //printf("\r\nCK_SYS: %d Hz", rcu_clock_freq_get(CK_SYS));
     
     /* test mode: run basic tests */
-    printf("\r\n--- Test Mode ---\r\n");
+    //printf("\r\n--- Test Mode ---\r\n");
     
     // Test 5: PWM output test (register level) - Run first to avoid interference
-    printf("Test 5: PWM output test\r\n");
+   // printf("Test 5: PWM output test\r\n");
     //pwm_test_register();
     
     // Test 0: LED test
-    printf("Test 0: LED test\r\n");
+    //printf("Test 0: LED test\r\n");
 		#if 0
     for(int i = 0; i < 3; i++) {
         led_on(LED_FORWARD);
@@ -421,10 +420,12 @@ int main(void)
         led_off(LED_REVERSE);
         delay_1ms(300U);
     }
-#endif
+     #endif
     // Test 1: Motor forward
     printf("Test 1: Motor forward at 500 RPM\r\n");
     led_on(LED_FORWARD);
+		
+		#if 0
     motor_set_speed(500, 0);
     //delay_1ms(3000U);
     motor_stop();
@@ -451,8 +452,8 @@ int main(void)
     
     // Test 4: Current and temperature reading
     printf("Test 4: Current and temperature reading\r\n");
-    current_value = read_motor_current();
-    temperature_value = read_temperature();
+//    current_value = read_motor_current();
+//    temperature_value = read_temperature();
     printf("Current: %d mA, Temperature: %d.%d °C\r\n", 
            current_value, temperature_value / 10, temperature_value % 10);
     
@@ -462,19 +463,24 @@ int main(void)
     printf("\r\n--- Test Mode Complete ---\r\n");
     printf("\r\nEntering normal operation mode...\r\n");
   
-	
+	#endif
 	 // gpio_config();
   //  timer_config();
 	//pwm_test_standalone();
 	//pwm_test_all();
 	//pwm_test_duty_adjust();
-    //pwm_test_pb13_pb14_duty_adjust();
-		//  while(1);
-    while (1) {
+     
+   //pwm_test_pb13_pb14_duty_adjust();
+   motor_control_init();
+
+	  //while(1);
+    while (1) 
+		{
+			#if 0
         /* scan key buttons for motor control */
         key_scan();
         
-        /* read motor current */
+        /* read motor current */?
         current_value = read_motor_current();
         
         /* read temperature */
@@ -511,5 +517,6 @@ int main(void)
         
         /* delay for 10ms */
         delay_1ms(10U);
+				#endif
     }
 }

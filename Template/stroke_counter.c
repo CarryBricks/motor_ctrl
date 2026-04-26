@@ -35,7 +35,7 @@ OF SUCH DAMAGE.
 #include "stroke_counter.h"
 
 // 全局变量
-volatile uint32_t stroke_count = 0;
+static uint32_t stroke_count = 0;
 volatile uint8_t position_detected = 0;
 volatile uint8_t top_position_detected = 0;
 volatile uint8_t bottom_position_detected = 0;
@@ -88,4 +88,10 @@ void stroke_counter_update(void)
 void stroke_counter_reset(void)
 {
     stroke_count = 0;
+}
+
+
+uint32_t get_stroke_count(void)
+{
+    return stroke_count;
 }

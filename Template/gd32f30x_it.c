@@ -36,9 +36,6 @@ OF SUCH DAMAGE.
 #include "main.h"
 #include "systick.h"
 
-// Modbus缓冲区大小定义
-#define MODBUS_BUFFER_SIZE    256
-
 /*!
     \brief      this function handles NMI exception
     \param[in]  none
@@ -140,64 +137,4 @@ void PendSV_Handler(void)
 void SysTick_Handler(void)
 {
     delay_decrement();
-}
-
-
-
-// 外部函数声明
-extern void hall_sensor_update(void);
-
-/*!
-    \brief      This function handles EXTI0 interrupt request.
-    \param[in]  none
-    \param[out] none
-    \retval     none
-*/
-void EXTI0_IRQHandler(void)
-{
-    if(exti_flag_get(EXTI_0)){
-        /* update hall sensor state */
-        hall_sensor_update();
-        /* clear the EXTI0 pending bit */
-        exti_flag_clear(EXTI_0);
-    }
-}
-
-/*!
-    \brief      This function handles EXTI1 interrupt request.
-    \param[in]  none
-    \param[out] none
-    \retval     none
-*/
-void EXTI1_IRQHandler(void)
-{
-    if(exti_flag_get(EXTI_1)){
-        /* update hall sensor state */
-        hall_sensor_update();
-        /* clear the EXTI1 pending bit */
-        exti_flag_clear(EXTI_1);
-    }
-}
-
-/*!
-    \brief      This function handles EXTI10_15 interrupt request.
-    \param[in]  none
-    \param[out] none
-    \retval     none
-*/
-void EXTI10_15_IRQHandler(void)
-{
-    if(exti_flag_get(EXTI_6)){
-        /* update hall sensor state */
-        hall_sensor_update();
-        /* clear the EXTI6 pending bit */
-        exti_flag_clear(EXTI_6);
-    }
-    
-    if(exti_flag_get(EXTI_7)){
-        /* update hall sensor state */
-        hall_sensor_update();
-        /* clear the EXTI7 pending bit */
-        exti_flag_clear(EXTI_7);
-    }
 }

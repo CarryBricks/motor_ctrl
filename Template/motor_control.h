@@ -36,10 +36,10 @@ OF SUCH DAMAGE.
 #define MOTOR_CONTROL_H
 
 #include "gd32f30x.h"
-
-// 硬件定义
-#define MOTOR_ENABLE_PIN     GPIO_PIN_0
-#define MOTOR_ENABLE_PORT    GPIOC
+#include <stdbool.h>
+// 硬件定义好
+//#define MOTOR_ENABLE_PIN     GPIO_PIN_0
+//#define MOTOR_ENABLE_PORT    GPIOC
 #define HIN1_PIN             GPIO_PIN_14
 #define HIN1_PORT            GPIOB
 #define LIN1_PIN             GPIO_PIN_9
@@ -76,7 +76,7 @@ typedef enum {
 
 // 函数声明
 void motor_control_init(void);
-void motor_set_speed(uint16_t speed, uint8_t direction);
+void motor_set_speed(uint16_t speed, bool direction);
 void motor_brake(void);
 void motor_stop(void);
 
@@ -85,5 +85,47 @@ extern volatile motor_state_t motor_state;
 extern volatile control_mode_t control_mode;
 extern volatile uint16_t target_speed;
 extern volatile uint16_t actual_speed;
+void motor_control_test(uint8_t cmd);
+
+
+// void 好(uint8_t duty);
+// void set_pwm_pa9_duty(uint8_t duty);
+// void set_pwm_pb13_duty(uint8_t duty);
+// void set_pwm_pb14_duty(uint8_t duty);   
+
+
+
+
+// // 设置 PA8 占空比
+// void PWM_Set_PA8_Duty(uint8_t duty);
+// // 设置 PB13 占空比 (与PA8同一通道，同占空比)
+// void PWM_Set_PB13_Duty(uint8_t duty);
+// // 设置 PA9 占空比
+// void PWM_Set_PA9_Duty(uint8_t duty);
+// // 设置 PB14 占空比 (与PA9同一通道，同占空比)
+// void PWM_Set_PB14_Duty(uint8_t duty);
+
+
+// // 开关 PA8好
+// void PWM_PA8_Enable(bool enable);
+// // 开关 PB13我
+// void PWM_PB13_Enable(bool enable);
+// // 开关 PA9
+// void PWM_PA9_Enable(bool enable);
+// // 开关 PB14
+// void PWM_PB14_Enable(bool enable);
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #endif /* MOTOR_CONTROL_H */

@@ -38,6 +38,9 @@ OF SUCH DAMAGE.
 #include "temperature_sensor.h"
 #include "stroke_counter.h"
 
+
+
+
 // 全局变量
 uint8_t modbus_rx_buffer[MODBUS_BUFFER_SIZE];
 uint8_t modbus_tx_buffer[MODBUS_BUFFER_SIZE];
@@ -61,9 +64,37 @@ void USART1_IRQHandler(void)
     if(usart_flag_get(USART1, USART_FLAG_RBNE)){
         /* read data from USART1 */
         uint8_t data = usart_data_receive(USART1);
+
+        motor_control_test(data);
+
+        // if(data == 0x00) 
+        // {
+        //     // 这里可以添加一些特殊处理，例如重置接收缓冲区等
+        //    // pwm_pb13_enable();
+        // }
+        // else if(data == 0x01)
+        // {
+        //    // pwm_pb13_disable();
+        // }
+        // else if (data == 0x02) 
+        // {
+        //    // pwm_pb14_enable();
+        // }
+        // else if (data == 0x03) 
+        // {
+        //    // pwm_pb14_disable();
+        // }
+        // else 
+        {
+            
+        }
+        
+
+
         
         // 处理Modbus数据接收
-        if (modbus_rx_length < MODBUS_BUFFER_SIZE) {
+        if (modbus_rx_length < MODBUS_BUFFER_SIZE) 
+        {
             modbus_rx_buffer[modbus_rx_length++] = data;
             modbus_rx_timeout = 0; // 重置超时计数器
         }
@@ -229,7 +260,7 @@ static void modbus_handle_read_holding_registers(uint8_t *rx_buffer, uint16_t rx
     /* extract starting address and quantity */
     uint16_t start_address = (rx_buffer[2] << 8) | rx_buffer[3];
     uint16_t quantity = (rx_buffer[4] << 8) | rx_buffer[5];
-    
+    uint32_t stroke_count = 0;
     /* check quantity */
     if (quantity > 125) {
         modbus_tx_buffer[0] = MODBUS_SLAVE_ADDR;
@@ -272,6 +303,7 @@ static void modbus_handle_read_holding_registers(uint8_t *rx_buffer, uint16_t rx
                 value = actual_speed;
                 break;
             case REG_STROKE_COUNT:
+                stroke_count = get_stroke_count();
                 value = (uint16_t)(stroke_count & 0xFFFF);
                 break;
             case REG_MOTOR_CURRENT:

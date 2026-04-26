@@ -47,9 +47,9 @@ OF SUCH DAMAGE.
 void stroke_counter_init(void);
 void stroke_counter_update(void);
 void stroke_counter_reset(void);
+uint32_t get_stroke_count(void);
 
 // 外部变量声明
-extern volatile uint32_t stroke_count;
 extern volatile uint8_t position_detected;
 extern volatile uint8_t top_position_detected;
 extern volatile uint8_t bottom_position_detected;

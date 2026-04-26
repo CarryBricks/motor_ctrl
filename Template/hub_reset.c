@@ -54,16 +54,16 @@ void hub_reset_init(void)
 }
 
 /*!
-    \brief      reset HUB by pulling high for 100ms then low
-    \param[in]  none
+    \brief      reset HUB by pulling high then low
+    \param[in]  delay_ms: reset pulse width in milliseconds
     \param[out] none
     \retval     none
 */
-void hub_reset(void)
+void hub_reset(uint32_t delay_ms)
 {
-    /* pull high for 100ms */
+    /* pull high for specified delay */
     gpio_bit_set(HUB_RESET_PORT, HUB_RESET_PIN);
-    delay_1ms(100U);
+    delay_1ms(delay_ms);
     
     /* pull low */
     gpio_bit_reset(HUB_RESET_PORT, HUB_RESET_PIN);

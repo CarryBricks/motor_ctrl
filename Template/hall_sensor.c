@@ -34,6 +34,7 @@ OF SUCH DAMAGE.
 
 #include "hall_sensor.h"
 #include "motor_control.h"
+#include "gd32f30x_exti.h"
 
 // 外部变量声明
 extern volatile uint32_t system_tick;
@@ -48,6 +49,49 @@ static uint32_t last_hall_time = 0;
 static uint32_t speed_calculation_interval = 100; // 100ms
 static uint32_t last_speed_calculation_time = 0;
 static uint32_t hall_count_in_interval = 0;
+
+// 外部函数声明
+extern void delay_decrement(void);
+
+// EXTI0 中断处理（Hall sensor A 通道）
+void EXTI0_IRQHandler(void)
+{
+    if(exti_flag_get(EXTI_0)){
+        /* update hall sensor state */
+        hall_sensor_update();
+        /* clear the EXTI0 pending bit */
+        exti_flag_clear(EXTI_0);
+    }
+}
+
+// EXTI1 中断处理（Hall sensor B 通道）
+void EXTI1_IRQHandler(void)
+{
+    if(exti_flag_get(EXTI_1)){
+        /* update hall sensor state */
+        hall_sensor_update();
+        /* clear the EXTI1 pending bit */
+        exti_flag_clear(EXTI_1);
+    }
+}
+
+// EXTI10_15 中断处理（Hall sensor PB6/PB7）
+void EXTI10_15_IRQHandler(void)
+{
+    if(exti_flag_get(EXTI_6)){
+        /* update hall sensor state */
+        hall_sensor_update();
+        /* clear the EXTI6 pending bit */
+        exti_flag_clear(EXTI_6);
+    }
+    
+    if(exti_flag_get(EXTI_7)){
+        /* update hall sensor state */
+        hall_sensor_update();
+        /* clear the EXTI7 pending bit */
+        exti_flag_clear(EXTI_7);
+    }
+}
 
 /*!
     \brief      Hall sensor initialization
