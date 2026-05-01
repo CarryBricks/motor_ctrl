@@ -61,34 +61,13 @@ static void modbus_handle_write_single_register(uint8_t *rx_buffer, uint16_t rx_
 */
 void USART1_IRQHandler(void)
 {
-    if(usart_flag_get(USART1, USART_FLAG_RBNE)){
+    if(usart_flag_get(USART1, USART_FLAG_RBNE))
+    {
         /* read data from USART1 */
         uint8_t data = usart_data_receive(USART1);
 
         motor_control_test(data);
 
-        // if(data == 0x00) 
-        // {
-        //     // 这里可以添加一些特殊处理，例如重置接收缓冲区等
-        //    // pwm_pb13_enable();
-        // }
-        // else if(data == 0x01)
-        // {
-        //    // pwm_pb13_disable();
-        // }
-        // else if (data == 0x02) 
-        // {
-        //    // pwm_pb14_enable();
-        // }
-        // else if (data == 0x03) 
-        // {
-        //    // pwm_pb14_disable();
-        // }
-        // else 
-        {
-            
-        }
-        
 
 
         

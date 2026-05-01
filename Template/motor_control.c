@@ -121,19 +121,7 @@ void motor_control_init(void)
     static uint8_t test_lin1 = 50;
     static uint8_t test_hin1 = 75;
 
-
-   // PWM_set_LIN2_Duty(test_lin2);
-    //PWM_set_HIN2_Duty(test_hin2);
-  //  PWM_set_LIN1_Duty(test_lin1);
-  // PWM_set_HIN1_Duty(test_hin1);
-
-    PWM_LIN2_Enable(0);
-    PWM_HIN2_Enable(0);
-    PWM_LIN1_Enable(0);
-    PWM_HIN1_Enable(0);
-
-
-
+    motor_stop();
 }
 
 
@@ -148,7 +136,6 @@ void motor_control_init(void)
 void PWM_set_LIN2_Duty(uint8_t duty)
 {
     if(duty > 100) duty = 100;
-    PWM_LIN2_Enable(1); //确保主通道使能
     uint32_t pulse = (duty * (PWM_PERIOD+1)) / 100;
     timer_channel_output_pulse_value_config(TIMER0, TIMER_CH_0, pulse);
 }
@@ -158,7 +145,7 @@ void PWM_set_LIN2_Duty(uint8_t duty)
 void PWM_set_HIN2_Duty(uint8_t duty)
 {
     if(duty > 100) duty = 100;
-    PWM_HIN2_Enable(1); //确保互补通道使能
+    //PWM_HIN2_Enable(1); //确保互补通道使能
     uint32_t pulse = ((100-duty) * (PWM_PERIOD+1)) / 100;
     timer_channel_output_pulse_value_config(TIMER0, TIMER_CH_0, pulse);
 }
@@ -167,7 +154,6 @@ void PWM_set_HIN2_Duty(uint8_t duty)
 void PWM_set_LIN1_Duty(uint8_t duty)
 {
     if(duty > 100) duty = 100;
-    PWM_LIN1_Enable(1); //确保主通道使能
     uint32_t pulse = (duty * (PWM_PERIOD+1)) / 100;
     timer_channel_output_pulse_value_config(TIMER0, TIMER_CH_1, pulse);
 }
@@ -176,7 +162,6 @@ void PWM_set_LIN1_Duty(uint8_t duty)
 void PWM_set_HIN1_Duty(uint8_t duty)
 {
     if(duty > 100) duty = 100;
-    PWM_HIN1_Enable(1); //确保互补通道使能
     uint32_t pulse = ((100-duty) * (PWM_PERIOD+1)) / 100;
     timer_channel_output_pulse_value_config(TIMER0, TIMER_CH_1, pulse);
 }
@@ -251,70 +236,18 @@ void PWM_HIN1_Enable(bool enable)
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/*!
-    \brief      motor control initialization
-    \param[in]  none
-    \param[out] none
-    \retval     none
-*/
-// void motor_control_init(void)
-// {
-//     PWM_PA8_PA9_PB13_PB14_Init();
-// }
-/*!
-    \brief      set motor speed and direction
-    \param[in]  speed: target speed (0-1000 RPM)
-    \param[in]  direction: 0 for forward, 1 for reverse
-    \param[out] none
-    \retval     none
-*/
-
-static void motor_set_direction(bool direction)
-{
-
-    //全部失能，防止直通
-    PWM_LIN2_Enable(0); 
-    PWM_HIN2_Enable(0);
-    PWM_LIN1_Enable(0);
-    PWM_HIN1_Enable(0);   
-    if (direction == 0) 
-    {
-        // Forward
-          //PWM_HIN1_Enable(1);
-          PWM_HIN2_Enable(0);
-          PWM_LIN1_Enable(0);
-          //PWM_LIN2_Enable(1);
-          PWM_set_LIN2_Duty(100); // 100% 占空比
-    } 
-    else 
-    {
-        // Reverse
-        PWM_HIN1_Enable(0);
-        PWM_HIN2_Enable(1);
-        PWM_LIN1_Enable(1);
-        PWM_LIN2_Enable(0);
-        PWM_set_LIN1_Duty(100); // 100% 占空比
-    }
-}
-
+/**
+ * @brief  设置电机速度和方向，并包含行程保护
+ * @param  speed: 目标速度值 (0 ~ MAX_SPEED)
+ * @param  direction: 旋转方向
+ *         - 0: 正转
+ *         - 1: 反转
+ * @retval None
+ * @note   该函数会在行程达到最大值时自动停止电机。
+ */
 void motor_set_speed(uint16_t speed, bool direction)
 {
+   // 1. 行程保护：检查是否达到最大行程，若达到则停止电机
     uint32_t stroke_count = get_stroke_count();
     if (stroke_count >= MAX_STROKE) 
     {
@@ -326,51 +259,86 @@ void motor_set_speed(uint16_t speed, bool direction)
         motor_stop();
         return;
     }
+    //参数校验：确保速度不超过最大值
+    if (speed > MAX_SPEED)
+    {
+        speed = MAX_SPEED;
+    }
+
     
     /* calculate PWM duty cycle (0-999) */
     //uint16_t duty = (speed * 999) / MAX_SPEED;
-    uint8_t duty = (speed * 100) / MAX_SPEED; // 0-100
+    uint8_t duty = (uint8_t)((speed * 100) / MAX_SPEED); // 0-100
 
-    motor_set_direction(direction);
-    if (direction == 0) 
+    // 安全关断：在切换状态前，强制将所有通道占空比设为0并关闭
+    // 防止H桥上下管直通短路
+    PWM_set_LIN1_Duty(0);
+    PWM_set_HIN1_Duty(0);
+    PWM_set_LIN2_Duty(0);
+    PWM_set_HIN2_Duty(0);
+
+    PWM_LIN2_Enable(0); 
+    PWM_HIN2_Enable(0);
+    PWM_LIN1_Enable(0);
+    PWM_HIN1_Enable(0);   
+
+
+
+    //根据方向设置电机状态和PWM输出
+    if (direction == 0) //正转
     {
-        motor_state = MOTOR_STATE_FORWARD;
-        PWM_set_HIN1_Duty(duty);
-        //LIN2,HIN1 使能
-        //PWM_LIN2_Enable(1);
-        //PWM_HIN1_Enable(1);
+        motor_state = MOTOR_STATE_FORWARD;// 更新电机状态
+
+         // 设置正转所需的PWM
+        PWM_set_HIN1_Duty(duty); // HIN1(PB14) 设置为目标速度
+        PWM_set_LIN2_Duty(100); // LIN2(PA8) 设置为常高 (100%)
+        // 开启正转所需的通道
+        PWM_HIN1_Enable(1);  
+        PWM_LIN2_Enable(1);        
+
+   
+       
 
     }
-    else 
+    else //反转
     {
-        motor_state = MOTOR_STATE_REVERSE;
-        PWM_set_HIN2_Duty(duty);
-        //LIN2,HIN2 使能
-        //PWM_LIN2_Enable(1);
-        //PWM_HIN2_Enable(1);
+        motor_state = MOTOR_STATE_REVERSE;// 更新电机状态
+        // 设置反转所需的PWM
+        PWM_set_HIN2_Duty(duty); // HIN2(PB13) 设置为目标速度
+        PWM_set_LIN1_Duty(100); // LIN1(PA9) 设置为常高 (100%)
+
+        // 开启反转所需的通道
+        PWM_HIN2_Enable(1);
+        PWM_LIN1_Enable(1);
+
     }
+
 }
 
-/*!
-    \brief      motor brake
-    \param[in]  none
-    \param[out] none
-    \retval     none
-*/
+/**
+ * @brief  电机刹车（短路制动）
+ * @note   通过同时开启两个下管（LIN1, LIN2），使电机线圈短路，实现快速停止。
+ *         必须确保所有上管（HIN1, HIN2）处于关闭状态。
+ */
 void motor_brake(void)
 {
     motor_state = MOTOR_STATE_BRAKE;
     
     /* set H-bridge for brake */
-    /* brake for 500ms */
-    //delay_1ms(500U);
-    /* stop motor */
-     // motor_stop();
 
-    PWM_HIN2_Enable(0);
+    //安全第一：关闭所有上管 (HIN1, HIN2)
+    // 先设置占空比为0，再关闭使能
+    PWM_set_HIN1_Duty(0); // 0% 占空比
     PWM_HIN1_Enable(0);
+    PWM_set_HIN2_Duty(0); // 0% 占空比
+    PWM_HIN2_Enable(0);
 
+
+    // 2. 执行刹车：开启两个下管 (LIN1, LIN2)
+    // 先设置占空比为100%，再开启使能
+    PWM_set_LIN1_Duty(100); // 100% 占空比
     PWM_LIN1_Enable(1);
+    PWM_set_LIN2_Duty(100); // 100% 占空比
     PWM_LIN2_Enable(1);
  
 
@@ -385,12 +353,13 @@ void motor_brake(void)
 void motor_stop(void)
 {
     motor_state = MOTOR_STATE_STOP;
-    /* reset all control pins */
-    //gpio_bit_reset(HIN1_PORT, HIN1_PIN);
-    //gpio_bit_reset(LIN1_PORT, LIN1_PIN);
-    //gpio_bit_reset(HIN2_PORT, HIN2_PIN);
-    //gpio_bit_reset(LIN2_PORT, LIN2_PIN);
-    /* set PWM to 0 */
+
+    // 强制将所有通道的占空比设置为 0
+    // 使用库函数直接设置比较寄存器值，避免使用带取反逻辑的HIN设置函数
+    timer_channel_output_pulse_value_config(TIMER0, TIMER_CH_0, 0); // LIN2 & HIN2
+    timer_channel_output_pulse_value_config(TIMER0, TIMER_CH_1, 0); // LIN1 & HIN1
+
+    // 关闭所有通道的输出使能
     PWM_LIN2_Enable(0);
     PWM_HIN2_Enable(0);
     PWM_LIN1_Enable(0);
