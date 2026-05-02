@@ -1,3 +1,54 @@
 [159928:152336:0410/221518.787:WARNING:t_skinfilemap.cpp(63)] SGRenderLog:CheckUpdate newMem.OpenMem Suc, szNewMem:Local\sgime_skin.v59.filemap.sogouime
 [159928:152336:0410/221518.787:WARNING:t_skinfilemap.cpp(65)] SGRenderLog:CheckUpdate finish: old version:1
 [159928:152336:0410/221518.787:WARNING:t_skinfilemap.cpp(67)] SGRenderLog:CheckUpdate finish: new version:59
+[20116:115292:0412/203301.099:WARNING:t_skinfilemap.cpp(63)] SGRenderLog:CheckUpdate newMem.OpenMem Suc, szNewMem:Local\sgime_skin.v62.filemap.sogouime
+[20116:115292:0412/203301.099:WARNING:t_skinfilemap.cpp(65)] SGRenderLog:CheckUpdate finish: old version:1
+[20116:115292:0412/203301.099:WARNING:t_skinfilemap.cpp(67)] SGRenderLog:CheckUpdate finish: new version:62
+[201368:216636:0412/203446.311:WARNING:t_skinfilemap.cpp(63)] SGRenderLog:CheckUpdate newMem.OpenMem Suc, szNewMem:Local\sgime_skin.v62.filemap.sogouime
+[201368:216636:0412/203446.311:WARNING:t_skinfilemap.cpp(65)] SGRenderLog:CheckUpdate finish: old version:1
+[201368:216636:0412/203446.311:WARNING:t_skinfilemap.cpp(67)] SGRenderLog:CheckUpdate finish: new version:62
+[92252:141548:0412/203536.741:WARNING:t_skinfilemap.cpp(63)] SGRenderLog:CheckUpdate newMem.OpenMem Suc, szNewMem:Local\sgime_skin.v62.filemap.sogouime
+[92252:141548:0412/203536.741:WARNING:t_skinfilemap.cpp(65)] SGRenderLog:CheckUpdate finish: old version:1
+[92252:141548:0412/203536.741:WARNING:t_skinfilemap.cpp(67)] SGRenderLog:CheckUpdate finish: new version:62
+[203388:112824:0412/203625.249:WARNING:t_skinfilemap.cpp(63)] SGRenderLog:CheckUpdate newMem.OpenMem Suc, szNewMem:Local\sgime_skin.v62.filemap.sogouime
+[203388:112824:0412/203625.249:WARNING:t_skinfilemap.cpp(65)] SGRenderLog:CheckUpdate finish: old version:1
+[203388:112824:0412/203625.249:WARNING:t_skinfilemap.cpp(67)] SGRenderLog:CheckUpdate finish: new version:62
+[190132:163872:0412/203659.993:WARNING:t_skinfilemap.cpp(63)] SGRenderLog:CheckUpdate newMem.OpenMem Suc, szNewMem:Local\sgime_skin.v62.filemap.sogouime
+[190132:163872:0412/203659.993:WARNING:t_skinfilemap.cpp(65)] SGRenderLog:CheckUpdate finish: old version:1
+[190132:163872:0412/203659.993:WARNING:t_skinfilemap.cpp(67)] SGRenderLog:CheckUpdate finish: new version:62
+[185352:68440:0412/203815.558:WARNING:t_skinfilemap.cpp(63)] SGRenderLog:CheckUpdate newMem.OpenMem Suc, szNewMem:Local\sgime_skin.v62.filemap.sogouime
+[185352:68440:0412/203815.558:WARNING:t_skinfilemap.cpp(65)] SGRenderLog:CheckUpdate finish: old version:1
+[185352:68440:0412/203815.558:WARNING:t_skinfilemap.cpp(67)] SGRenderLog:CheckUpdate finish: new version:62
+[82636:16884:0412/203939.224:WARNING:t_skinfilemap.cpp(63)] SGRenderLog:CheckUpdate newMem.OpenMem Suc, szNewMem:Local\sgime_skin.v62.filemap.sogouime
+[82636:16884:0412/203939.224:WARNING:t_skinfilemap.cpp(65)] SGRenderLog:CheckUpdate finish: old version:1
+[82636:16884:0412/203939.224:WARNING:t_skinfilemap.cpp(67)] SGRenderLog:CheckUpdate finish: new version:62
+[57672:209756:0412/204039.735:WARNING:t_skinfilemap.cpp(63)] SGRenderLog:CheckUpdate newMem.OpenMem Suc, szNewMem:Local\sgime_skin.v62.filemap.sogouime
+[57672:209756:0412/204039.736:WARNING:t_skinfilemap.cpp(65)] SGRenderLog:CheckUpdate finish: old version:1
+[57672:209756:0412/204039.736:WARNING:t_skinfilemap.cpp(67)] SGRenderLog:CheckUpdate finish: new version:62
+[220108:152864:0412/204117.788:WARNING:t_skinfilemap.cpp(63)] SGRenderLog:CheckUpdate newMem.OpenMem Suc, szNewMem:Local\sgime_skin.v62.filemap.sogouime
+[220108:152864:0412/204117.788:WARNING:t_skinfilemap.cpp(65)] SGRenderLog:CheckUpdate finish: old version:1
+[220108:152864:0412/204117.788:WARNING:t_skinfilemap.cpp(67)] SGRenderLog:CheckUpdate finish: new version:62
+[50500:145176:0412/204203.054:WARNING:t_skinfilemap.cpp(63)] SGRenderLog:CheckUpdate newMem.OpenMem Suc, szNewMem:Local\sgime_skin.v62.filemap.sogouime
+[50500:145176:0412/204203.054:WARNING:t_skinfilemap.cpp(65)] SGRenderLog:CheckUpdate finish: old version:1
+[50500:145176:0412/204203.054:WARNING:t_skinfilemap.cpp(67)] SGRenderLog:CheckUpdate finish: new version:62
+[57672:209756:0412/205333.066:WARNING:t_skinfilemap.cpp(56)] SGRenderLog:CheckUpdate newMem.OpenMem failed, szNewMem:Local\sgime_skin.v63.filemap.sogouime err:系统错误2: 系统找不到指定的文件。  
+打开Filemap失败: Local\sgime_skin.v63.filemap.sogouime3026614df17
+[57672:209756:0412/205333.066:WARNING:t_skinfilemap.cpp(65)] SGRenderLog:CheckUpdate finish: old version:62
+[57672:209756:0412/205333.066:WARNING:t_skinfilemap.cpp(67)] SGRenderLog:CheckUpdate finish: new version:63
+[159252:11968:0412/205600.109:WARNING:t_skinfilemap.cpp(63)] SGRenderLog:CheckUpdate newMem.OpenMem Suc, szNewMem:Local\sgime_skin.v63.filemap.sogouime
+[159252:11968:0412/205600.109:WARNING:t_skinfilemap.cpp(65)] SGRenderLog:CheckUpdate finish: old version:1
+[159252:11968:0412/205600.109:WARNING:t_skinfilemap.cpp(67)] SGRenderLog:CheckUpdate finish: new version:63
+[34640:32596:0418/120026.369:WARNING:kernel_switch.cc(95)] [Engine] GetProductDataInfo failed for: input_cloud_request_rank_1
+[34640:32596:0418/120026.370:WARNING:kernel_switch.cc(95)] [Engine] GetProductDataInfo failed for: input_cloud_request_type_1
+[34640:32596:0418/120026.371:WARNING:kernel_switch.cc(95)] [Engine] GetProductDataInfo failed for: input_switch_device_model_1
+[34640:32596:0418/120026.372:WARNING:data_router_sender.cpp(44)] [DataRouterSender] RegisterReceiver not supported on sender side, route=/sg_tool/./slo_data_receiver
+[34640:32596:0418/120026.442:WARNING:t_skinfilemap.cpp(63)] SGRenderLog:CheckUpdate newMem.OpenMem Suc, szNewMem:Local\sgime_skin.v3.filemap.sogouime
+[34640:32596:0418/120026.442:WARNING:t_skinfilemap.cpp(65)] SGRenderLog:CheckUpdate finish: old version:1
+[34640:32596:0418/120026.442:WARNING:t_skinfilemap.cpp(67)] SGRenderLog:CheckUpdate finish: new version:3
+[2696:33580:0418/120331.893:WARNING:kernel_switch.cc(95)] [Engine] GetProductDataInfo failed for: input_cloud_request_rank_1
+[2696:33580:0418/120331.894:WARNING:kernel_switch.cc(95)] [Engine] GetProductDataInfo failed for: input_cloud_request_type_1
+[2696:33580:0418/120331.894:WARNING:kernel_switch.cc(95)] [Engine] GetProductDataInfo failed for: input_switch_device_model_1
+[2696:33580:0418/120331.894:WARNING:data_router_sender.cpp(44)] [DataRouterSender] RegisterReceiver not supported on sender side, route=/sg_tool/./slo_data_receiver
+[2696:33580:0418/120331.957:WARNING:t_skinfilemap.cpp(63)] SGRenderLog:CheckUpdate newMem.OpenMem Suc, szNewMem:Local\sgime_skin.v3.filemap.sogouime
+[2696:33580:0418/120331.957:WARNING:t_skinfilemap.cpp(65)] SGRenderLog:CheckUpdate finish: old version:1
+[2696:33580:0418/120331.957:WARNING:t_skinfilemap.cpp(67)] SGRenderLog:CheckUpdate finish: new version:3

@@ -13,8 +13,8 @@ are permitted provided that the following conditions are met:
 
     1. Redistributions of source code must retain the above copyright notice, this
        list of conditions and the following disclaimer.
-    2. Redistributions in binary form must reproduce the above copyright notice,
-       this list of conditions and the the following disclaimer.
+    2. Redistributions in binary form must reproduce in the documentation and/or
+       other materials provided with the distribution.
     3. Neither the name of the copyright holder nor the names of its contributors
        may be used to endorse or promote products derived from this software without
        specific prior written permission.
@@ -35,22 +35,19 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "systick.h"
 #include "motor_control.h"
 
-// 按键状态枚举
 typedef enum {
-    KEY_STATE_IDLE = 0,        // 按键释放状态
-    KEY_STATE_PRESSED,         // 按键按下
-    KEY_STATE_LONG_PRESSED,    // 长按触发
-    KEY_STATE_RELEASE          // 释放处理中
+    KEY_STATE_IDLE = 0,
+    KEY_STATE_PRESSED,
+    KEY_STATE_LONG_PRESSED,
+    KEY_STATE_RELEASE
 } key_state_t;
 
-// 按键结构体
 typedef struct {
     key_state_t state;
-    uint16_t press_time;
+    uint32_t press_start_time;
     uint8_t long_press_reported;
 } key_info_t;
 
-// 全局变量
 static key_info_t forward_key = {KEY_STATE_IDLE, 0, 0};
 static key_info_t reverse_key = {KEY_STATE_IDLE, 0, 0};
 
@@ -67,12 +64,15 @@ void key_button_init(void)
 
 static void key_update(key_info_t *key, uint8_t is_pressed, uint8_t direction)
 {
-    switch (key->state) {
+    uint32_t current_time = get_system_tick();
+
+    switch (key->state) 
+    {
         case KEY_STATE_IDLE:
             if (is_pressed) 
             {
                 key->state = KEY_STATE_PRESSED;
-                key->press_time = 0;
+                key->press_start_time = current_time;
                 key->long_press_reported = 0;
             }
             break;
@@ -80,8 +80,8 @@ static void key_update(key_info_t *key, uint8_t is_pressed, uint8_t direction)
         case KEY_STATE_PRESSED:
             if (is_pressed) 
             {
-                key->press_time += KEY_SCAN_INTERVAL;
-                if (key->press_time >= KEY_LONG_PRESS_TIME) 
+                uint32_t press_duration = current_time - key->press_start_time;
+                if (press_duration >= KEY_LONG_PRESS_TIME) 
                 {
                     key->state = KEY_STATE_LONG_PRESSED;
                     key->long_press_reported = 1;
@@ -96,40 +96,32 @@ static void key_update(key_info_t *key, uint8_t is_pressed, uint8_t direction)
                     }
                 }
             } 
-            else
+            else 
             {
-                key->state = KEY_STATE_RELEASE;
+                uint32_t press_duration = current_time - key->press_start_time;
+                if (press_duration < KEY_LONG_PRESS_TIME) 
+                {
+                    motor_set_speed(MOTOR_CONTINUOUS_SPEED, direction);
+                    delay_1ms(MOTOR_STEP_PULSE_TIME);
+                    motor_stop();
+                }
+                key->state = KEY_STATE_IDLE;
             }
             break;
 
         case KEY_STATE_LONG_PRESSED:
             if (!is_pressed) 
             {
-                key->state = KEY_STATE_RELEASE;
-            }
-            break;
-
-        case KEY_STATE_RELEASE:
-            if (!is_pressed) 
-            {
-                if (!key->long_press_reported) 
-                {
-                    motor_set_speed(MOTOR_CONTINUOUS_SPEED, direction);
-                    delay_1ms(MOTOR_STEP_PULSE_TIME);
-                    motor_stop();
-                }
                 motor_stop();
                 if (direction == 0) 
                 {
                     led_off(LED_FORWARD);
                 } 
-                else
+                else 
                 {
                     led_off(LED_REVERSE);
                 }
                 key->state = KEY_STATE_IDLE;
-                key->press_time = 0;
-                key->long_press_reported = 0;
             }
             break;
 

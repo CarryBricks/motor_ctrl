@@ -52,17 +52,12 @@ OF SUCH DAMAGE.
 #include "led_control.h"
 #include "key_button.h"
 #include "hub_reset.h"
-#include "pwm_test.h"
+
 
 // 函数声明
 void system_init(void);
 void uart2_init(void);
-void pwm_test_standalone(void);
-void pwm_test_register(void);
-void uart2_test_standalone(void);
-void pwm_test_all(void);
-void pwm_test_duty_adjust(void);
-void pwm_test_pb13_pb14_duty_adjust(void);
+
 /*!
     \brief      UART1 initialization for printf
     \param[in]  none
@@ -70,22 +65,6 @@ void pwm_test_pb13_pb14_duty_adjust(void);
     \retval     none
 */
 
-void gpio_config(void)
-{
-    rcu_periph_clock_enable(RCU_GPIOA);
-    rcu_periph_clock_enable(RCU_AF);
-	
-	  rcu_periph_clock_enable(RCU_GPIOB);
-
-    /*Configure PA0 PA1 PA2(TIMER1 CH0 CH1 CH2) as alternate function*/
-    gpio_init(GPIOA,GPIO_MODE_AF_PP,GPIO_OSPEED_50MHZ,GPIO_PIN_8);
-    gpio_init(GPIOA,GPIO_MODE_AF_PP,GPIO_OSPEED_50MHZ,GPIO_PIN_9);
-	
-	
-	
-	  gpio_init(GPIOB,GPIO_MODE_AF_PP,GPIO_OSPEED_50MHZ,GPIO_PIN_13);
-    gpio_init(GPIOB,GPIO_MODE_AF_PP,GPIO_OSPEED_50MHZ,GPIO_PIN_14);
-}
 
 
 
@@ -338,49 +317,9 @@ int main(void)
 	 // 简单初始化 UART2
     uart2_simple_init();
     
-    // 发送 5 个 0x0A
-   //uart2_send_5_bytes();
-	//while(1);
-    
-    /* test direct UART before any other initialization */
-    #if 0
-    rcu_periph_clock_enable(RCU_GPIOB);
-    rcu_periph_clock_enable(RCU_USART2);
-    rcu_periph_clock_enable(RCU_AF);
-    
-    /* Try default PA2/PA3 first */
-    gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_2);
-    gpio_init(GPIOA, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_3);
-    
-    usart_deinit(USART2);
-    usart_baudrate_set(USART2, 115200U);
-    usart_word_length_set(USART2, USART_WL_8BIT);
-    usart_stop_bit_set(USART2, USART_STB_1BIT);
-    usart_parity_config(USART2, USART_PM_NONE);
-    usart_receive_config(USART2, USART_RECEIVE_ENABLE);
-    usart_transmit_config(USART2, USART_TRANSMIT_ENABLE);
-    usart_enable(USART2);
-    
-    /* send test data */
-    usart_data_transmit(USART2, 'H');
-    while(!usart_flag_get(USART2, USART_FLAG_TBE));
-    usart_data_transmit(USART2, 'I');
-    while(!usart_flag_get(USART2, USART_FLAG_TBE));
-    usart_data_transmit(USART2, '\r');
-    while(!usart_flag_get(USART2, USART_FLAG_TBE));
-    usart_data_transmit(USART2, '\n');
-    while(!usart_flag_get(USART2, USART_FLAG_TBE));
-    
-    /* UART2 initialization for printf */
-    uart2_init();
-  
-    //uart2_test_standalone();
-    /* simple printf test */
-    printf("OK\r\n");
-  #endif
     
     /* motor control initialization */
-    //motor_control_init();
+    motor_control_init();
     
     /* current sensor initialization */
     current_sensor_init();
@@ -396,127 +335,29 @@ int main(void)
     
     /* Modbus initialization */
     modbus_init();
-    
-    /* print system information */
-    //printf("\r\nMotor Control System Initialized");
-    //printf("\r\nCK_SYS: %d Hz", rcu_clock_freq_get(CK_SYS));
-    
-    /* test mode: run basic tests */
-    //printf("\r\n--- Test Mode ---\r\n");
-    
-    // Test 5: PWM output test (register level) - Run first to avoid interference
-   // printf("Test 5: PWM output test\r\n");
-    //pwm_test_register();
-    
-    // Test 0: LED test
-    //printf("Test 0: LED test\r\n");
-		#if 0
-    for(int i = 0; i < 3; i++) {
-        led_on(LED_FORWARD);
-        delay_1ms(300U);
-        led_off(LED_FORWARD);
-        led_on(LED_REVERSE);
-        delay_1ms(300U);
-        led_off(LED_REVERSE);
-        delay_1ms(300U);
-    }
-     #endif
-    // Test 1: Motor forward
-    printf("Test 1: Motor forward at 500 RPM\r\n");
-    led_on(LED_FORWARD);
-		
-		#if 0
-    motor_set_speed(500, 0);
-    //delay_1ms(3000U);
-    motor_stop();
-    led_off(LED_FORWARD);
-   // delay_1ms(1000U);
 
-    // Test 2: Motor reverse
-    printf("Test 2: Motor reverse at 300 RPM\r\n");
-    led_on(LED_REVERSE);
-    motor_set_speed(300, 1);
-    //delay_1ms(3000U);
-    motor_stop();
-    led_off(LED_REVERSE);
-    //delay_1ms(1000U);
-
-    // Test 3: Motor brake
-    printf("Test 3: Motor brake test\r\n");
-    
-    // Test 4: HUB reset test
-    printf("Test 4: HUB reset test\r\n");
-    printf("Executing HUB reset...\r\n");
-    //hub_reset();
-    printf("HUB reset completed\r\n");
-    
-    // Test 4: Current and temperature reading
-    printf("Test 4: Current and temperature reading\r\n");
-//    current_value = read_motor_current();
-//    temperature_value = read_temperature();
-    printf("Current: %d mA, Temperature: %d.%d °C\r\n", 
-           current_value, temperature_value / 10, temperature_value % 10);
-    
-    // Test 5: Stroke count
-    printf("Test 5: Stroke count: %u\r\n", stroke_count);
-    
-    printf("\r\n--- Test Mode Complete ---\r\n");
-    printf("\r\nEntering normal operation mode...\r\n");
-  
-	#endif
-	 // gpio_config();
-  //  timer_config();
-	//pwm_test_standalone();
-	//pwm_test_all();
-	//pwm_test_duty_adjust();
-     
-   //pwm_test_pb13_pb14_duty_adjust();
-   motor_control_init();
-
-	  //while(1);
     while (1) 
-		{
-			#if 0
+	{
+	
         /* scan key buttons for motor control */
         key_scan();
-        
-        /* read motor current */?
-        current_value = read_motor_current();
-        
-        /* read temperature */
-        temperature_value = read_temperature();
-        
+        /* process motor overcurrent protection */
+        //motor_over_current_process();
         /* process Hall sensor data */
         hall_sensor_process();
-        
-        /* check for overcurrent */
-        if (current_value > MAX_CURRENT) {
-            motor_brake();
-            printf("\r\nOvercurrent detected: %d mA", current_value);
-        }
-        
+        /* handle temperature overheat condition */
+       //temperature_overheat_process();
         /* check position detection */
-        top_position_detected = gpio_input_bit_get(TOP_POSITION_DETECT_PORT, TOP_POSITION_DETECT_PIN);
-        bottom_position_detected = gpio_input_bit_get(BOTTOM_POSITION_DETECT_PORT, BOTTOM_POSITION_DETECT_PIN);
-        position_detected = top_position_detected || bottom_position_detected;
-        
-        if (position_detected) {
-            motor_stop();
-            if (top_position_detected) {
-                printf("\r\nTop position detected");
-            } else if (bottom_position_detected) {
-                printf("\r\nBottom position detected");
-            }
-        }
-        
+        position_detect_process();
         /* process Modbus messages */
+        #if 0
         modbus_process();
-        
         /* increment Modbus timeout counter */
         modbus_rx_timeout += 10;
-        
+        printf("\r\nBottom position detected");
         /* delay for 10ms */
         delay_1ms(10U);
-				#endif
+        #endif
+
     }
 }

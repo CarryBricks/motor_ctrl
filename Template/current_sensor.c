@@ -144,7 +144,8 @@ void check_stall_current(void)
     motor_state_t state = motor_state;
     
     /* only check if motor is running */
-    if (state == MOTOR_STATE_FORWARD || state == MOTOR_STATE_REVERSE) {
+    if (state == MOTOR_STATE_FORWARD || state == MOTOR_STATE_REVERSE) 
+    {
         /* check both ADC channels for stall current */
         uint16_t adc1_current = (current_adc1_value * 3300) / 4096; // mV
         adc1_current = (adc1_current * 1000) / (30 * 10); // mA
@@ -153,7 +154,8 @@ void check_stall_current(void)
         adc2_current = (adc2_current * 1000) / (30 * 10); // mA
         
         /* check if either channel exceeds stall threshold */
-        if (adc1_current > STALL_CURRENT_THRESHOLD || adc2_current > STALL_CURRENT_THRESHOLD) {
+        if (adc1_current > STALL_CURRENT_THRESHOLD || adc2_current > STALL_CURRENT_THRESHOLD) 
+        {
             /* stop motor immediately */
             motor_stop();
             
@@ -162,3 +164,5 @@ void check_stall_current(void)
         }
     }
 }
+
+

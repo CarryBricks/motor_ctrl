@@ -33,9 +33,11 @@ OF SUCH DAMAGE.
 */
 
 #include "temperature_sensor.h"
-
+#include "motor_control.h"
+#define OVERHEAT_TEMPERATURE_THRESHOLD 80 // 80°C overheat threshold
 // 全局变量
 volatile uint16_t temperature_value = 0;
+
 
 /*!
     \brief      temperature sensor initialization
@@ -47,7 +49,6 @@ void temperature_sensor_init(void)
 {
     /* enable GPIO clock */
     rcu_periph_clock_enable(RCU_GPIOA);
-    
     /* configure temperature sensor GPIO */
     gpio_init(TEMPERATURE_ADC_PORT, GPIO_MODE_AIN, GPIO_OSPEED_50MHZ, TEMPERATURE_ADC_PIN);
 }
@@ -76,4 +77,22 @@ uint16_t read_temperature(void)
     
     temperature_value = temperature;
     return temperature;
+}
+
+/*!
+    \brief      handle temperature overheat condition
+    \param[in]  none
+    \param[out] none
+    \retval     none
+*/
+void temperature_overheat_process(void)
+{
+    uint16_t temp = read_temperature();
+    
+    /* check if temperature exceeds threshold */
+    if (temp > OVERHEAT_TEMPERATURE_THRESHOLD) 
+    {
+        /* stop motor immediately */
+        motor_stop();
+    }
 }

@@ -130,14 +130,17 @@ void modbus_init(void)
 void modbus_process(void)
 {
     /* check for timeout */
-    if (modbus_rx_length > 0 && modbus_rx_timeout > MODBUS_TIMEOUT) {
+    if (modbus_rx_length > 0 && modbus_rx_timeout > MODBUS_TIMEOUT) 
+    {
         modbus_rx_length = 0;
     }
     
     /* check if we have a complete message */
-    if (modbus_rx_length >= 8) {
+    if (modbus_rx_length >= 8) 
+    {
         /* check slave address */
-        if (modbus_rx_buffer[0] != MODBUS_SLAVE_ADDR) {
+        if (modbus_rx_buffer[0] != MODBUS_SLAVE_ADDR) 
+        {
             modbus_rx_length = 0;
             return;
         }
@@ -146,7 +149,8 @@ void modbus_process(void)
         uint16_t received_crc = (modbus_rx_buffer[modbus_rx_length - 1] << 8) | modbus_rx_buffer[modbus_rx_length - 2];
         uint16_t calculated_crc = modbus_crc16(modbus_rx_buffer, modbus_rx_length - 2);
         
-        if (received_crc != calculated_crc) {
+        if (received_crc != calculated_crc) 
+        {
             modbus_rx_length = 0;
             return;
         }
@@ -154,7 +158,8 @@ void modbus_process(void)
         /* process function code */
         uint8_t function_code = modbus_rx_buffer[1];
         
-        switch (function_code) {
+        switch (function_code) 
+        {
             case MODBUS_FC_READ_HOLDING_REGISTERS:
                 modbus_handle_read_holding_registers(modbus_rx_buffer, modbus_rx_length);
                 break;
@@ -167,12 +172,10 @@ void modbus_process(void)
                 modbus_tx_buffer[1] = function_code | 0x80;
                 modbus_tx_buffer[2] = MODBUS_ERR_ILLEGAL_FUNCTION;
                 modbus_tx_length = 3;
-                
                 /* add CRC */
                 uint16_t crc = modbus_crc16(modbus_tx_buffer, modbus_tx_length);
                 modbus_tx_buffer[modbus_tx_length++] = crc & 0xFF;
                 modbus_tx_buffer[modbus_tx_length++] = (crc >> 8) & 0xFF;
-                
                 /* send response */
                 modbus_send_response(modbus_tx_buffer, modbus_tx_length);
                 break;
@@ -196,7 +199,6 @@ void modbus_send_response(uint8_t *buffer, uint16_t length)
         while(!usart_flag_get(USART1, USART_FLAG_TBE));
         usart_data_transmit(USART1, buffer[i]);
     }
-    
     /* wait for transmission complete */
     while(!usart_flag_get(USART1, USART_FLAG_TC));
 }
@@ -212,18 +214,21 @@ static uint16_t modbus_crc16(uint8_t *buffer, uint16_t length)
 {
     uint16_t crc = 0xFFFF;
     
-    for (uint16_t i = 0; i < length; i++) {
+    for (uint16_t i = 0; i < length; i++) 
+    {
         crc ^= buffer[i];
-        
-        for (uint8_t j = 0; j < 8; j++) {
-            if (crc & 0x0001) {
+        for (uint8_t j = 0; j < 8; j++) 
+        {
+            if (crc & 0x0001) 
+            {
                 crc = (crc >> 1) ^ 0xA001;
-            } else {
+            } 
+            else 
+            {
                 crc >>= 1;
             }
         }
     }
-    
     return crc;
 }
 
@@ -241,7 +246,8 @@ static void modbus_handle_read_holding_registers(uint8_t *rx_buffer, uint16_t rx
     uint16_t quantity = (rx_buffer[4] << 8) | rx_buffer[5];
     uint32_t stroke_count = 0;
     /* check quantity */
-    if (quantity > 125) {
+    if (quantity > 125) 
+    {
         modbus_tx_buffer[0] = MODBUS_SLAVE_ADDR;
         modbus_tx_buffer[1] = MODBUS_FC_READ_HOLDING_REGISTERS | 0x80;
         modbus_tx_buffer[2] = MODBUS_ERR_ILLEGAL_DATA_VALUE;
@@ -264,11 +270,13 @@ static void modbus_handle_read_holding_registers(uint8_t *rx_buffer, uint16_t rx
     modbus_tx_length = 3;
     
     /* read registers */
-    for (uint16_t i = 0; i < quantity; i++) {
+    for (uint16_t i = 0; i < quantity; i++)
+    {
         uint16_t address = start_address + i;
         uint16_t value = 0;
         
-        switch (address) {
+        switch (address) 
+        {
             case REG_MOTOR_STATE:
                 value = (uint16_t)motor_state;
                 break;
@@ -339,14 +347,17 @@ static void modbus_handle_write_single_register(uint8_t *rx_buffer, uint16_t rx_
     uint16_t value = (rx_buffer[4] << 8) | rx_buffer[5];
     
     /* write register */
-    switch (address) {
+    switch (address) 
+    {
         case REG_MOTOR_STATE:
-            if (value < 4) {
+            if (value < 4) 
+            {
                 motor_state = (motor_state_t)value;
             }
             break;
         case REG_CONTROL_MODE:
-            if (value < 2) {
+            if (value < 2) 
+            {
                 control_mode = (control_mode_t)value;
             }
             break;
@@ -354,7 +365,8 @@ static void modbus_handle_write_single_register(uint8_t *rx_buffer, uint16_t rx_
             target_speed = value;
             break;
         case REG_COMMAND:
-            switch (value) {
+            switch (value) 
+            {
                 case 0x00:
                     motor_stop();
                     break;

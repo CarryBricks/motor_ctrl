@@ -48,5 +48,5 @@ uint16_t read_temperature(void);
 
 // 外部变量声明
 extern volatile uint16_t temperature_value;
-
+void temperature_overheat_process(void);
 #endif /* TEMPERATURE_SENSOR_H */

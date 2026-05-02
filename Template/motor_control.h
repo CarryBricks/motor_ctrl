@@ -86,7 +86,7 @@ extern volatile control_mode_t control_mode;
 extern volatile uint16_t target_speed;
 extern volatile uint16_t actual_speed;
 void motor_control_test(uint8_t cmd);
-
+void motor_over_current_process(void);
 
 // void 好(uint8_t duty);
 // void set_pwm_pa9_duty(uint8_t duty);

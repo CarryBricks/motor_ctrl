@@ -33,6 +33,9 @@ OF SUCH DAMAGE.
 */
 
 #include "motor_control.h"
+#include "current_sensor.h"
+#include "temperature_sensor.h"
+#include "hall_sensor.h"
 #include "systick.h"
 #include "gd32f30x.h"
 #include <stdio.h>
@@ -365,6 +368,28 @@ void motor_stop(void)
     PWM_LIN1_Enable(0);
     PWM_HIN1_Enable(0);
 }
+
+
+
+
+/*
+ * @brief  处理电机过流情况
+ * @param  none
+ * @retval none
+ */
+void motor_over_current_process(void)
+{
+
+    /* check for overcurrent */
+    uint16_t current = read_motor_current();
+    if (current > MAX_CURRENT) 
+    {
+        motor_brake();
+        printf("\r\nOvercurrent detected: %d mA", current_value);
+    }
+    
+}
+
 
 
 

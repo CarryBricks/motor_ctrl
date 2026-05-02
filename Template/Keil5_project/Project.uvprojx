@@ -445,34 +445,9 @@
               <FilePath>..\hub_reset.c</FilePath>
             </File>
             <File>
-              <FileName>pwm_test.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\pwm_test.c</FilePath>
-            </File>
-            <File>
-              <FileName>pwm_test_standalone.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\pwm_test_standalone.c</FilePath>
-            </File>
-            <File>
-              <FileName>pwm_test_register.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\pwm_test_register.c</FilePath>
-            </File>
-            <File>
               <FileName>uart2_test.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\uart2_test.c</FilePath>
-            </File>
-            <File>
-              <FileName>pwm_test_pa0_pa1.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\pwm_test_pa0_pa1.c</FilePath>
-            </File>
-            <File>
-              <FileName>pwm_test_pb13_pb14.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\pwm_test_pb13_pb14.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -1170,34 +1145,9 @@
               <FilePath>..\hub_reset.c</FilePath>
             </File>
             <File>
-              <FileName>pwm_test.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\pwm_test.c</FilePath>
-            </File>
-            <File>
-              <FileName>pwm_test_standalone.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\pwm_test_standalone.c</FilePath>
-            </File>
-            <File>
-              <FileName>pwm_test_register.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\pwm_test_register.c</FilePath>
-            </File>
-            <File>
               <FileName>uart2_test.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\uart2_test.c</FilePath>
-            </File>
-            <File>
-              <FileName>pwm_test_pa0_pa1.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\pwm_test_pa0_pa1.c</FilePath>
-            </File>
-            <File>
-              <FileName>pwm_test_pb13_pb14.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\pwm_test_pb13_pb14.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -1895,34 +1845,9 @@
               <FilePath>..\hub_reset.c</FilePath>
             </File>
             <File>
-              <FileName>pwm_test.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\pwm_test.c</FilePath>
-            </File>
-            <File>
-              <FileName>pwm_test_standalone.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\pwm_test_standalone.c</FilePath>
-            </File>
-            <File>
-              <FileName>pwm_test_register.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\pwm_test_register.c</FilePath>
-            </File>
-            <File>
               <FileName>uart2_test.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\uart2_test.c</FilePath>
-            </File>
-            <File>
-              <FileName>pwm_test_pa0_pa1.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\pwm_test_pa0_pa1.c</FilePath>
-            </File>
-            <File>
-              <FileName>pwm_test_pb13_pb14.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\pwm_test_pb13_pb14.c</FilePath>
             </File>
           </Files>
         </Group>

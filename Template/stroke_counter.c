@@ -31,9 +31,9 @@ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWIS
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY 
 OF SUCH DAMAGE.
 */
-
+#include "gd32f30x.h"
 #include "stroke_counter.h"
-
+#include "motor_control.h"
 // 全局变量
 static uint32_t stroke_count = 0;
 volatile uint8_t position_detected = 0;
@@ -94,4 +94,32 @@ void stroke_counter_reset(void)
 uint32_t get_stroke_count(void)
 {
     return stroke_count;
+}
+
+
+void position_detect_process(void)
+{
+    /* check position detection */
+    top_position_detected = gpio_input_bit_get(TOP_POSITION_DETECT_PORT, TOP_POSITION_DETECT_PIN);
+    bottom_position_detected = gpio_input_bit_get(BOTTOM_POSITION_DETECT_PORT, BOTTOM_POSITION_DETECT_PIN);
+    position_detected = top_position_detected || bottom_position_detected;
+    
+    if (position_detected) 
+    {
+        motor_stop();
+        if (top_position_detected) 
+        {
+            //printf("\r\nTop position detected");
+        } 
+        else if (bottom_position_detected) 
+        {
+            //printf("\r\nBottom position detected");
+        }
+        
+        /* increment stroke count on position detection */
+        stroke_counter_update();
+        
+        /* simple debounce delay */
+        //for(i=0;i<60000;i++);
+    }
 }
