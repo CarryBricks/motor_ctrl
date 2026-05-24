@@ -34,6 +34,7 @@ OF SUCH DAMAGE.
 #include "gd32f30x.h"
 #include "stroke_counter.h"
 #include "motor_control.h"
+#include <stdio.h>
 // 全局变量
 static uint32_t stroke_count = 0;
 volatile uint8_t position_detected = 0;
@@ -113,7 +114,7 @@ void position_detect_process(void)
         } 
         else if (bottom_position_detected) 
         {
-            //printf("\r\nBottom position detected");
+           // printf("\r\nBottom position detected");
         }
         
         /* increment stroke count on position detection */

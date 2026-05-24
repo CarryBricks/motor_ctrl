@@ -64,7 +64,7 @@ typedef enum {
 } control_mode_t;
 
 // 电机参数定义
-#define MAX_SPEED            1000    // 最大速度 (RPM)
+#define MAX_SPEED            4700         //1000    // 最大速度 (RPM)
 #define MAX_CURRENT          3000    // 最大电流 (mA)
 #define MAX_STROKE           10000   // 最大行程 (脉冲数)
 
@@ -87,42 +87,6 @@ extern volatile uint16_t target_speed;
 extern volatile uint16_t actual_speed;
 void motor_control_test(uint8_t cmd);
 void motor_over_current_process(void);
-
-// void 好(uint8_t duty);
-// void set_pwm_pa9_duty(uint8_t duty);
-// void set_pwm_pb13_duty(uint8_t duty);
-// void set_pwm_pb14_duty(uint8_t duty);   
-
-
-
-
-// // 设置 PA8 占空比
-// void PWM_Set_PA8_Duty(uint8_t duty);
-// // 设置 PB13 占空比 (与PA8同一通道，同占空比)
-// void PWM_Set_PB13_Duty(uint8_t duty);
-// // 设置 PA9 占空比
-// void PWM_Set_PA9_Duty(uint8_t duty);
-// // 设置 PB14 占空比 (与PA9同一通道，同占空比)
-// void PWM_Set_PB14_Duty(uint8_t duty);
-
-
-// // 开关 PA8好
-// void PWM_PA8_Enable(bool enable);
-// // 开关 PB13我
-// void PWM_PB13_Enable(bool enable);
-// // 开关 PA9
-// void PWM_PA9_Enable(bool enable);
-// // 开关 PB14
-// void PWM_PB14_Enable(bool enable);
-
-
-
-
-
-
-
-
-
 
 
 

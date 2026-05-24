@@ -50,7 +50,7 @@ void led_init(void)
     led_off(LED_REVERSE);
 }
 
-void led_on(led_typedef_enum led)
+void led_on(led_id_enum led)
 {
     switch(led) {
         case LED_FORWARD:
@@ -66,7 +66,7 @@ void led_on(led_typedef_enum led)
     }
 }
 
-void led_off(led_typedef_enum led)
+void led_off(led_id_enum led)
 {
     switch(led) {
         case LED_FORWARD:
@@ -82,7 +82,7 @@ void led_off(led_typedef_enum led)
     }
 }
 
-void led_toggle(led_typedef_enum led)
+void led_toggle(led_id_enum led)
 {
     switch(led) {
         case LED_FORWARD:

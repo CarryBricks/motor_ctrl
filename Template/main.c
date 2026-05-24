@@ -37,9 +37,6 @@ OF SUCH DAMAGE.
 #include <stdio.h>
 #include <string.h>
 
-// 覆盖EVAL_COM0定义，使其指向USART2
-#define EVAL_COM0 USART2
-
 #include "main.h"
 
 // 模块头文件包含
@@ -56,14 +53,8 @@ OF SUCH DAMAGE.
 
 // 函数声明
 void system_init(void);
-void uart2_init(void);
 
-/*!
-    \brief      UART1 initialization for printf
-    \param[in]  none
-    \param[out] none
-    \retval     none
-*/
+
 
 
 
@@ -130,57 +121,6 @@ void timer_config(void)
 
 
 
-void uart2_init(void)
-{
-    /* enable GPIO clock */
-    rcu_periph_clock_enable(RCU_GPIOB);
-    
-    /* enable USART clock */
-    rcu_periph_clock_enable(RCU_USART2);
-    
-    /* enable AFIO clock */
-    rcu_periph_clock_enable(RCU_AF);
-    
-    /* configure USART2 remapping: try different remap configurations */
-    /* First try direct register access */
-    AFIO_PCF0 &= ~(BITS(4,5));  /* Clear USART2 remap bits */
-    AFIO_PCF0 |= BIT(5);        /* Set for PB10/PB11 mapping */
-    
-    /* configure USART2 GPIO - PB10 (TX), PB11 (RX) */
-    gpio_init(GPIOB, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_10);  // TX
-    gpio_init(GPIOB, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_11);  // RX
-    
-    /* configure USART2 */
-    usart_deinit(USART2);
-    usart_baudrate_set(USART2, 115200U);
-    usart_word_length_set(USART2, USART_WL_8BIT);
-    usart_stop_bit_set(USART2, USART_STB_1BIT);
-    usart_parity_config(USART2, USART_PM_NONE);
-    usart_hardware_flow_cts_config(USART2, USART_CTS_DISABLE);
-    usart_hardware_flow_rts_config(USART2, USART_RTS_DISABLE);
-    usart_receive_config(USART2, USART_RECEIVE_ENABLE);
-    usart_transmit_config(USART2, USART_TRANSMIT_ENABLE);
-    
-    /* enable USART2 */
-    usart_enable(USART2);
-    
-    /* wait for USART2 to be ready */
-    delay_1ms(10U);
-    
-    /* test direct UART transmission */
-    usart_data_transmit(USART2, 'T');
-    while(!usart_flag_get(USART2, USART_FLAG_TBE));
-    usart_data_transmit(USART2, 'E');
-    while(!usart_flag_get(USART2, USART_FLAG_TBE));
-    usart_data_transmit(USART2, 'S');
-    while(!usart_flag_get(USART2, USART_FLAG_TBE));
-    usart_data_transmit(USART2, 'T');
-    while(!usart_flag_get(USART2, USART_FLAG_TBE));
-    usart_data_transmit(USART2, '\r');
-    while(!usart_flag_get(USART2, USART_FLAG_TBE));
-    usart_data_transmit(USART2, '\n');
-    while(!usart_flag_get(USART2, USART_FLAG_TBE));
-}
 
 /*!
     \brief      redirect C library printf function to UART2
@@ -189,26 +129,6 @@ void uart2_init(void)
     \param[out] none
     \retval     character sent
 */
-#if defined(__GNUC__) && !defined(__clang__)
-int __io_putchar(int ch)
-{
-    usart_data_transmit(USART2, (uint8_t)ch);
-    while(!usart_flag_get(USART2, USART_FLAG_TBE));
-    return ch;
-}
-#endif
-
-#ifdef __CC_ARM
-int fputc(int ch, FILE *f)
-{
-    usart_data_transmit(USART2, (uint8_t)ch);
-    while(!usart_flag_get(USART2, USART_FLAG_TBE));
-    return ch;
-}
-#endif
-
-/* For Keil MDK compiler, fputc is already defined in gd32f307c_eval.c */
-
 /*!
     \brief      system initialization
     \param[in]  none
@@ -250,28 +170,6 @@ void system_init(void)
 
 void uart2_simple_init(void)
 {
-	#if 0
-    // 只启用必要的时钟
-    rcu_periph_clock_enable(RCU_GPIOB);
-    rcu_periph_clock_enable(RCU_USART2);
-   // rcu_periph_clock_enable(RCU_AF);
-    
-    // 配置 PB10/PB11 为 UART2
-    gpio_init(GPIOB, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_10);  // TX
-    gpio_init(GPIOB, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_11);  // RX
-    
-    // 配置 UART2
-    usart_deinit(USART2);
-    usart_baudrate_set(USART2, 115200U);
-    usart_word_length_set(USART2, USART_WL_8BIT);
-    usart_stop_bit_set(USART2, USART_STB_1BIT);
-    usart_parity_config(USART2, USART_PM_NONE);
-    usart_receive_config(USART2, USART_RECEIVE_ENABLE);
-    usart_transmit_config(USART2, USART_TRANSMIT_ENABLE);
-    usart_enable(USART2);
-	#endif
-	
-	
 	  // 开启时钟
     rcu_periph_clock_enable(RCU_GPIOB);
     rcu_periph_clock_enable(RCU_USART2);
@@ -294,19 +192,7 @@ void uart2_simple_init(void)
     usart_enable(USART2);
 }
 
-void uart2_send_5_bytes(void)
-{
-    uint8_t data = 0x55;
-	  uint32_t i = 0;
-    //for(int i = 0; i < 5; i++) 
-		while(1)
-	  {
-        while(!usart_flag_get(USART2, USART_FLAG_TBE));
-        usart_data_transmit(USART2, data);
-        while(!usart_flag_get(USART2, USART_FLAG_TC));
-				for(i=0;i<60000;i++);
-    }
-}
+
 
 
 int main(void)
@@ -314,10 +200,9 @@ int main(void)
     /* system initialization */
     system_init();
 	
-	 // 简单初始化 UART2
+	 // 使用自定义函数初始化串口 USART2 (PB10/PB11)
     uart2_simple_init();
-    
-    
+
     /* motor control initialization */
     motor_control_init();
     
@@ -335,21 +220,26 @@ int main(void)
     
     /* Modbus initialization */
     modbus_init();
-
-    while (1) 
+   motor_set_speed(1000, 0); //测试：反转100%速度
+    while (1 )
 	{
-	
+
+
         /* scan key buttons for motor control */
-        key_scan();
+      key_scan();
         /* process motor overcurrent protection */
         //motor_over_current_process();
         /* process Hall sensor data */
-        hall_sensor_process();
+      hall_sensor_process();
         /* handle temperature overheat condition */
        //temperature_overheat_process();
         /* check position detection */
-        position_detect_process();
-        /* process Modbus messages */
+      position_detect_process();
+
+
+      //current_sensor_init_origin();
+     // printf_adc_val0_and_val1_per_second();
+      /* process Modbus messages */
         #if 0
         modbus_process();
         /* increment Modbus timeout counter */

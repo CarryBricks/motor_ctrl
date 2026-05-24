@@ -46,11 +46,11 @@ typedef enum {
     LED_FORWARD = 0,
     LED_REVERSE = 1,
     LED_BOTH = 2
-} led_typedef_enum;
+} led_id_enum;
 
 void led_init(void);
-void led_on(led_typedef_enum led);
-void led_off(led_typedef_enum led);
-void led_toggle(led_typedef_enum led);
+void led_on(led_id_enum led);
+void led_off(led_id_enum led);
+void led_toggle(led_id_enum led);
 
 #endif

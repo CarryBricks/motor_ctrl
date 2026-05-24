@@ -44,9 +44,10 @@ OF SUCH DAMAGE.
 
 extern volatile uint32_t hall_count;
 extern volatile uint16_t actual_speed;
+extern volatile uint16_t motor_rpm;
 
 void hall_sensor_init(void);
 void hall_sensor_process(void);
 void hall_sensor_update(void);
-
+void test_pb6_low_cont_in_1_second(void);
 #endif

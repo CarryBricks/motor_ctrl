@@ -41,9 +41,47 @@ OF SUCH DAMAGE.
 #include <stdio.h>
 #include "stroke_counter.h"
 
+// LIN1 = PA9 普通GPIO
+#define LIN1_HIGH()    gpio_bit_set(GPIOA, GPIO_PIN_9)
+#define LIN1_LOW()     gpio_bit_reset(GPIOA, GPIO_PIN_9)
+
+// LIN2 = PA8 普通GPIO
+#define LIN2_HIGH()    gpio_bit_set(GPIOA, GPIO_PIN_8)
+#define LIN2_LOW()     gpio_bit_reset(GPIOA, GPIO_PIN_8)
 
 
-#define PWM_PERIOD    999U  // 1kHz 周期
+void motor_gpio_init(void)
+{
+    // 1. 使能时钟
+    rcu_periph_clock_enable(RCU_GPIOA);
+    rcu_periph_clock_enable(RCU_GPIOB);
+    rcu_periph_clock_enable(RCU_AF);
+
+    // ========================
+    // LIN1(PA9) + LIN2(PA8) = 普通GPIO
+    // ========================
+    gpio_init(GPIOA, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_8 | GPIO_PIN_9);
+    LIN1_LOW();
+    LIN2_LOW();
+
+    // ========================
+    // HIN1(PB14) + HIN2(PB13) = PWM 输出
+    // ========================
+    //gpio_init(GPIOB, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_13 | GPIO_PIN_14);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+#define PWM_PERIOD    82U   // 20kHz 周期 (120MHz/72/83≈20kHz)
 
 
 // 全局变量
@@ -65,7 +103,7 @@ void PWM_set_HIN2_Duty(uint8_t duty);
 void PWM_set_LIN1_Duty(uint8_t duty);
 void PWM_set_HIN1_Duty(uint8_t duty);
 
-
+#if 0
 //void PWM_PA8_PA9_PB13_PB14_Init(void)
 void motor_control_init(void)
 {
@@ -118,15 +156,75 @@ void motor_control_init(void)
     timer_auto_reload_shadow_enable(TIMER0);
     timer_primary_output_config(TIMER0, ENABLE);
     timer_enable(TIMER0);
-
-    static uint8_t test_lin2 = 10;
-    static uint8_t test_hin2 = 25;
-    static uint8_t test_lin1 = 50;
-    static uint8_t test_hin1 = 75;
-
-    motor_stop();
 }
+#endif
 
+void motor_control_init(void)
+{
+    timer_oc_parameter_struct timer_ocpara;
+    timer_parameter_struct timerpara;
+
+    /* 1. 开全部时钟 */
+    rcu_periph_clock_enable(RCU_GPIOA);
+    rcu_periph_clock_enable(RCU_GPIOB);
+    rcu_periph_clock_enable(RCU_AF);
+    rcu_periph_clock_enable(RCU_TIMER0);
+
+    /* 2. 引脚配置（关键修改）
+        PA8、PA9 = 普通推挽输出 GPIO
+        PB13、PB14 = 复用功能 PWM
+    */
+    // PA8、PA9 → 普通GPIO
+    gpio_init(GPIOA, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_8 | GPIO_PIN_9);
+    gpio_bit_reset(GPIOA, GPIO_PIN_8 | GPIO_PIN_9); // 默认低电平
+
+    // PB13、PB14 → 复用PWM
+    gpio_init(GPIOB, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_13 | GPIO_PIN_14);
+
+    /* 3. TIMER0 基础配置（完全保留你的参数） */
+    timer_deinit(TIMER0);
+    timerpara.prescaler         = 71;
+    timerpara.alignedmode       = TIMER_COUNTER_EDGE;
+    timerpara.counterdirection  = TIMER_COUNTER_UP;
+    timerpara.period            = PWM_PERIOD;
+    timerpara.clockdivision     = TIMER_CKDIV_DIV1;
+    timerpara.repetitioncounter = 0;
+    timer_init(TIMER0, &timerpara);
+
+    /* ==================== 配置通道0（ PA8关闭 + PB13 开 ） ==================== */
+    // 主通道（PA8）= 关闭
+    // 互补通道（PB13）= 使能（PWM）
+    timer_ocpara.outputstate  = TIMER_CCX_DISABLE;   // 主通道 PA8 关闭
+    timer_ocpara.outputnstate = TIMER_CCXN_ENABLE;   // 互补通道 PB13 使能
+    timer_ocpara.ocpolarity   = TIMER_OC_POLARITY_HIGH;
+    timer_ocpara.ocnpolarity  = TIMER_OCN_POLARITY_HIGH;
+    timer_ocpara.ocidlestate  = TIMER_OC_IDLE_STATE_LOW;
+    timer_ocpara.ocnidlestate = TIMER_OCN_IDLE_STATE_LOW;
+
+    timer_channel_output_config(TIMER0, TIMER_CH_0, &timer_ocpara);
+    timer_channel_output_pulse_value_config(TIMER0, TIMER_CH_0, 0);
+    timer_channel_output_mode_config(TIMER0, TIMER_CH_0, TIMER_OC_MODE_PWM0);
+    timer_channel_output_shadow_config(TIMER0, TIMER_CH_0, TIMER_OC_SHADOW_ENABLE);
+
+    /* ==================== 配置通道1（ PA9关闭 + PB14 开 ） ==================== */
+    // 主通道（PA9）= 关闭
+    // 互补通道（PB14）= 使能（PWM）
+    timer_ocpara.outputstate  = TIMER_CCX_DISABLE;   // 主通道 PA9 关闭
+    timer_ocpara.outputnstate = TIMER_CCXN_ENABLE;   // 互补通道 PB14 使能
+
+    timer_channel_output_config(TIMER0, TIMER_CH_1, &timer_ocpara);
+    timer_channel_output_pulse_value_config(TIMER0, TIMER_CH_1, 0);
+    timer_channel_output_mode_config(TIMER0, TIMER_CH_1, TIMER_OC_MODE_PWM0);
+    timer_channel_output_shadow_config(TIMER0, TIMER_CH_1, TIMER_OC_SHADOW_ENABLE);
+
+    /* 4. 统一使能（保留你原来的） */
+    timer_auto_reload_shadow_enable(TIMER0);
+    timer_primary_output_config(TIMER0, ENABLE);
+    timer_automatic_output_enable(TIMER0);
+    timer_enable(TIMER0);
+
+
+}
 
 
 
@@ -138,9 +236,9 @@ void motor_control_init(void)
 //void PWM_Set_PA8_Duty(uint8_t duty)
 void PWM_set_LIN2_Duty(uint8_t duty)
 {
-    if(duty > 100) duty = 100;
-    uint32_t pulse = (duty * (PWM_PERIOD+1)) / 100;
-    timer_channel_output_pulse_value_config(TIMER0, TIMER_CH_0, pulse);
+    // if(duty > 100) duty = 100;
+    // uint32_t pulse = (duty * (PWM_PERIOD+1)) / 100;
+    // timer_channel_output_pulse_value_config(TIMER0, TIMER_CH_0, pulse);
 }
 
 // 设置 PB13 占空比 0~100
@@ -148,6 +246,7 @@ void PWM_set_LIN2_Duty(uint8_t duty)
 void PWM_set_HIN2_Duty(uint8_t duty)
 {
     if(duty > 100) duty = 100;
+    duty = 100 - duty; // HIN占空比取反
     //PWM_HIN2_Enable(1); //确保互补通道使能
     uint32_t pulse = ((100-duty) * (PWM_PERIOD+1)) / 100;
     timer_channel_output_pulse_value_config(TIMER0, TIMER_CH_0, pulse);
@@ -156,15 +255,16 @@ void PWM_set_HIN2_Duty(uint8_t duty)
 // 设置 PA9 占空比 0~100
 void PWM_set_LIN1_Duty(uint8_t duty)
 {
-    if(duty > 100) duty = 100;
-    uint32_t pulse = (duty * (PWM_PERIOD+1)) / 100;
-    timer_channel_output_pulse_value_config(TIMER0, TIMER_CH_1, pulse);
+    // if(duty > 100) duty = 100;
+    // uint32_t pulse = (duty * (PWM_PERIOD+1)) / 100;
+    // timer_channel_output_pulse_value_config(TIMER0, TIMER_CH_1, pulse);
 }
 
 // 设置 PB14 占空比 0~100
 void PWM_set_HIN1_Duty(uint8_t duty)
 {
     if(duty > 100) duty = 100;
+    duty = 100 - duty; // HIN占空比取反
     uint32_t pulse = ((100-duty) * (PWM_PERIOD+1)) / 100;
     timer_channel_output_pulse_value_config(TIMER0, TIMER_CH_1, pulse);
 }
@@ -275,15 +375,15 @@ void motor_set_speed(uint16_t speed, bool direction)
 
     // 安全关断：在切换状态前，强制将所有通道占空比设为0并关闭
     // 防止H桥上下管直通短路
-    PWM_set_LIN1_Duty(0);
-    PWM_set_HIN1_Duty(0);
-    PWM_set_LIN2_Duty(0);
-    PWM_set_HIN2_Duty(0);
+    // PWM_set_LIN1_Duty(0);
+    // PWM_set_HIN1_Duty(0);
+    // PWM_set_LIN2_Duty(0);
+    // PWM_set_HIN2_Duty(0);
 
-    PWM_LIN2_Enable(0); 
-    PWM_HIN2_Enable(0);
-    PWM_LIN1_Enable(0);
-    PWM_HIN1_Enable(0);   
+    // PWM_LIN2_Enable(0); 
+    // PWM_HIN2_Enable(0);
+    // PWM_LIN1_Enable(0);
+    // PWM_HIN1_Enable(0);   
 
 
 
@@ -292,20 +392,27 @@ void motor_set_speed(uint16_t speed, bool direction)
     {
         motor_state = MOTOR_STATE_FORWARD;// 更新电机状态
 
-         // 设置正转所需的PWM
-        PWM_set_HIN1_Duty(duty); // HIN1(PB14) 设置为目标速度
-        PWM_set_LIN2_Duty(100); // LIN2(PA8) 设置为常高 (100%)
-        // 开启正转所需的通道
-        PWM_HIN1_Enable(1);  
-        PWM_LIN2_Enable(1);        
+        //  // 设置正转所需的PWM
+        // PWM_set_HIN1_Duty(duty); // HIN1(PB14) 设置为目标速度
+        // PWM_set_LIN2_Duty(100); // LIN2(PA8) 设置为常高 (100%)
+        // // 开启正转所需的通道
+        // PWM_HIN1_Enable(1);  
+        // PWM_LIN2_Enable(1);        
 
-   
-       
+
+        PWM_set_HIN1_Duty(83); // HIN1(PB14) 设置为目标速度
+        LIN1_HIGH(); // LIN1(PA9) 设置为常高 (100%)
+        LIN2_LOW(); // LIN2(PA8) 设置为常低 (0%)
+        PWM_set_HIN2_Duty(0); // HIN2(PB13) 设置为目标速度
+
+        //delay_1ms(10000);
+        //motor_stop();
 
     }
     else //反转
     {
         motor_state = MOTOR_STATE_REVERSE;// 更新电机状态
+        #if 0
         // 设置反转所需的PWM
         PWM_set_HIN2_Duty(duty); // HIN2(PB13) 设置为目标速度
         PWM_set_LIN1_Duty(100); // LIN1(PA9) 设置为常高 (100%)
@@ -313,6 +420,15 @@ void motor_set_speed(uint16_t speed, bool direction)
         // 开启反转所需的通道
         PWM_HIN2_Enable(1);
         PWM_LIN1_Enable(1);
+        #endif
+        PWM_set_HIN1_Duty(0); // HIN1(PB14) 设置为目标速度
+        LIN2_HIGH(); // LIN2(PA8) 设置为常高 (100%)
+        LIN1_LOW(); // LIN1(PA9) 设置为常低 (0%)
+        PWM_set_HIN2_Duty(90); // HIN2(PB13) 设置为目标速度
+
+        //delay_1ms(10000);
+        //motor_stop();
+
 
     }
 
@@ -356,6 +472,7 @@ void motor_brake(void)
 void motor_stop(void)
 {
     motor_state = MOTOR_STATE_STOP;
+    #if 0
 
     // 强制将所有通道的占空比设置为 0
     // 使用库函数直接设置比较寄存器值，避免使用带取反逻辑的HIN设置函数
@@ -367,6 +484,17 @@ void motor_stop(void)
     PWM_HIN2_Enable(0);
     PWM_LIN1_Enable(0);
     PWM_HIN1_Enable(0);
+    #endif
+
+
+
+    PWM_set_HIN1_Duty(0); // HIN1(PB14) 设置为目标速度
+    PWM_set_HIN2_Duty(0); // HIN2(PB13) 设置为目标速度
+    delay_1ms(1);
+    LIN1_LOW(); // LIN1(PA9) 设置为常高 (100%)
+    LIN2_LOW(); // LIN2(PA8) 设置为常低 (0%)
+
+
 }
 
 
@@ -385,7 +513,7 @@ void motor_over_current_process(void)
     if (current > MAX_CURRENT) 
     {
         motor_brake();
-        printf("\r\nOvercurrent detected: %d mA", current_value);
+        printf("\r\nOvercurrent detected: %d mA", current);
     }
     
 }

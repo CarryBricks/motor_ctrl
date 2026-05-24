@@ -34,6 +34,8 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "key_button.h"
 #include "systick.h"
 #include "motor_control.h"
+#include <stdio.h>
+
 
 typedef enum {
     KEY_STATE_IDLE = 0,
@@ -89,11 +91,13 @@ static void key_update(key_info_t *key, uint8_t is_pressed, uint8_t direction)
                     if (direction == 0) 
                     {
                         led_on(LED_FORWARD);
+											  printf("\r\n key long Forward pressed");
                     } 
                     else 
                     {
                         led_on(LED_REVERSE);
                     }
+                    
                 }
             } 
             else 
@@ -104,6 +108,8 @@ static void key_update(key_info_t *key, uint8_t is_pressed, uint8_t direction)
                     motor_set_speed(MOTOR_CONTINUOUS_SPEED, direction);
                     delay_1ms(MOTOR_STEP_PULSE_TIME);
                     motor_stop();
+									  printf("\r\n key long Reverse pressed");
+                    
                 }
                 key->state = KEY_STATE_IDLE;
             }
@@ -116,12 +122,15 @@ static void key_update(key_info_t *key, uint8_t is_pressed, uint8_t direction)
                 if (direction == 0) 
                 {
                     led_off(LED_FORWARD);
+									  printf("\r\n Reverse key released after long press");
                 } 
                 else 
                 {
                     led_off(LED_REVERSE);
+									 printf("\r\n Forward key released after long press");
                 }
                 key->state = KEY_STATE_IDLE;
+                
             }
             break;
 
