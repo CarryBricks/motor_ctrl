@@ -125,7 +125,7 @@ void EXTI5_9_IRQHandler(void)
             uint32_t pulse_diff = hall_count - last_pulse_count;
             last_pulse_count = hall_count;
             motor_rpm = (pulse_diff * 600) / 4;
-           // printf("RPM=%d\n", motor_rpm);
+            printf("RPM=%d\n", motor_rpm);
         }
     }
 #endif
@@ -135,28 +135,6 @@ void EXTI5_9_IRQHandler(void)
     if(exti_interrupt_flag_get(EXTI_7))
         exti_interrupt_flag_clear(EXTI_7);
     
-    #if 0
-    // PB6 中断
-    if(exti_interrupt_flag_get(EXTI_6) == SET)
-    {
-        exti_interrupt_flag_clear(EXTI_6);
-        // ======================
-        // PB6 下降沿要执行的代码
-        // ======================
-        hall_sensor_update();
-    }
-
-    // PB7 中断
-    if(exti_interrupt_flag_get(EXTI_7) == SET)
-    {
-        exti_interrupt_flag_clear(EXTI_7);
-
-        // ======================
-        // PB7 下降沿要执行的代码
-        // ======================
-        hall_sensor_update();
-    }
-        #endif
 }
 
 

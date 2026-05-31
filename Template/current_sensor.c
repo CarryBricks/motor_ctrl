@@ -122,7 +122,7 @@ uint16_t read_motor_current(void)
     uint16_t adc2_value = adc_routine_data_read(ADC0);
 
 
-    //printf("ADC1=%d, ADC2=%d\n", adc1_value, adc2_value);
+  //  printf("ADC1=%d, ADC2=%d\n", adc1_value, adc2_value);
 
     
 
@@ -179,7 +179,7 @@ uint16_t read_motor_current(void)
     
     current_value = current;
 
-    printf("motor Current=%f mA\n", current);
+    //printf("motor Current=%f mA\n", current);
     
     /* check for stall current */
     check_stall_current();

@@ -221,7 +221,12 @@ int main(void)
     
     /* Modbus initialization */
     modbus_init();
-   motor_set_speed(1000, 0); //测试：反转100%速度
+		
+		
+	
+  static uint8_t direction = 0;
+  static uint16_t target_speed = 2000;
+   motor_set_speed(target_speed, direction); //测试：反转100%速度
 	 //test_pa5_pa6_adc();
     while (1 )
 	{
@@ -237,6 +242,8 @@ int main(void)
        //temperature_overheat_process();
         /* check position detection */
       position_detect_process();
+      /* speed closed loop control */
+      speed_closed_loop_control();
 
 
       //current_sensor_init_origin();

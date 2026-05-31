@@ -86,11 +86,30 @@ void motor_gpio_init(void)
 
 // 全局变量
 volatile motor_state_t motor_state = MOTOR_STATE_STOP;
-volatile control_mode_t control_mode = MODE_OPEN_LOOP;
+volatile control_mode_t control_mode = MODE_CLOSED_LOOP;  // 默认使用闭环模式
 volatile uint16_t target_speed = 0;
+volatile uint8_t current_pwm_duty = 0;  // 当前PWM占空比
+
+// 开环控制参数（83%占空比→4500RPM）
+#define DUTY_AT_4500RPM  83
+#define RPM_AT_83DUTY    4500
+#define MIN_DUTY         20  // 最小占空比，确保电机能启动
+
+// PID控制参数（优化：减少震荡，加快收敛）
+static float pid_kp = 0.012f;    // 比例系数（增大）
+static float pid_ki = 0.001f;    // 积分系数（增大，加快误差消除）
+static float pid_kd = 0.008f;    // 微分系数（保持，抑制震荡）
+static int32_t pid_integral = 0;
+static int32_t pid_last_error = 0;
+
+// RPM滑动平均滤波参数
+#define RPM_FILTER_SIZE  10  // 增大窗口，减少波动
+static uint16_t rpm_filter_buffer[RPM_FILTER_SIZE] = {0};
+static uint8_t rpm_filter_index = 0;
+static uint8_t rpm_filter_count = 0;
 
 // 外部变量声明
-extern volatile uint16_t actual_speed;
+extern volatile uint16_t motor_rpm;  // 实际转速（来自hall_sensor）
 
 
 //函数声明
@@ -103,61 +122,7 @@ void PWM_set_HIN2_Duty(uint8_t duty);
 void PWM_set_LIN1_Duty(uint8_t duty);
 void PWM_set_HIN1_Duty(uint8_t duty);
 
-#if 0
-//void PWM_PA8_PA9_PB13_PB14_Init(void)
-void motor_control_init(void)
-{
-    timer_oc_parameter_struct timer_ocpara;
-    timer_parameter_struct timerpara;
 
-    /* 1. 开全部时钟 */
-    rcu_periph_clock_enable(RCU_GPIOA);
-    rcu_periph_clock_enable(RCU_GPIOB);
-    rcu_periph_clock_enable(RCU_AF);
-    rcu_periph_clock_enable(RCU_TIMER0);
-
-    /* 2. 配置全部4个引脚 */
-    gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_8 | GPIO_PIN_9);
-    gpio_init(GPIOB, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_13 | GPIO_PIN_14);
-
-    /* 3. TIMER0 基础配置 只初始化一次！*/
-    timer_deinit(TIMER0);
-    timerpara.prescaler         = 71;
-    timerpara.alignedmode       = TIMER_COUNTER_EDGE;
-    timerpara.counterdirection  = TIMER_COUNTER_UP;
-    timerpara.period            = PWM_PERIOD;
-    timerpara.clockdivision     = TIMER_CKDIV_DIV1;
-    timerpara.repetitioncounter = 0;
-    timer_init(TIMER0, &timerpara);
-
-    /* ==================== 配置通道0（PA8 + PB13） ==================== */
-    timer_ocpara.outputstate  = TIMER_CCX_ENABLE;   // 主通道 PA8 使能
-    timer_ocpara.outputnstate = TIMER_CCXN_ENABLE;  // 互补通道 PB13 使能
-    timer_ocpara.ocpolarity   = TIMER_OC_POLARITY_HIGH;
-    timer_ocpara.ocnpolarity  = TIMER_OC_POLARITY_LOW;//TIMER_OCN_POLARITY_HIGH;
-    timer_ocpara.ocidlestate  = TIMER_OC_IDLE_STATE_LOW;
-    timer_ocpara.ocnidlestate = TIMER_OCN_IDLE_STATE_LOW;
-
-    timer_channel_output_config(TIMER0, TIMER_CH_0, &timer_ocpara);
-    timer_channel_output_pulse_value_config(TIMER0, TIMER_CH_0, 0);  // 50%
-    timer_channel_output_mode_config(TIMER0, TIMER_CH_0, TIMER_OC_MODE_PWM0);
-    timer_channel_output_shadow_config(TIMER0, TIMER_CH_0, TIMER_OC_SHADOW_ENABLE);
-
-    /* ==================== 配置通道1（PA9 + PB14） ==================== */
-    timer_ocpara.outputstate  = TIMER_CCX_ENABLE;   // 主通道 PA9 使能
-    timer_ocpara.outputnstate = TIMER_CCXN_ENABLE;  // 互补通道 PB14 使能
-
-    timer_channel_output_config(TIMER0, TIMER_CH_1, &timer_ocpara);
-    timer_channel_output_pulse_value_config(TIMER0, TIMER_CH_1, 0);  // 30%
-    timer_channel_output_mode_config(TIMER0, TIMER_CH_1, TIMER_OC_MODE_PWM0);
-    timer_channel_output_shadow_config(TIMER0, TIMER_CH_1, TIMER_OC_SHADOW_ENABLE);
-
-    /* 4. 统一使能 */
-    timer_auto_reload_shadow_enable(TIMER0);
-    timer_primary_output_config(TIMER0, ENABLE);
-    timer_enable(TIMER0);
-}
-#endif
 
 void motor_control_init(void)
 {
@@ -368,37 +333,169 @@ void motor_set_speed(uint16_t speed, bool direction)
         speed = MAX_SPEED;
     }
 
-    
-    /* calculate PWM duty cycle (0-999) */
-    //uint16_t duty = (speed * 999) / MAX_SPEED;
-    uint8_t duty = (uint8_t)((speed * 100) / MAX_SPEED); // 0-100
+    // 设置目标转速
+    target_speed = speed;
 
+    // 重置PID控制器
+    pid_integral = 0;
+    pid_last_error = 0;
 
-
-    //根据方向设置电机状态和PWM输出
-    static uint8_t duty_test = 83;
+    // 根据方向设置电机状态和GPIO电平
     if (direction == 0) //正转
     {
-        motor_state = MOTOR_STATE_FORWARD;// 更新电机状态
-       // PWM_set_HIN1_Duty(83); // HIN1(PB14) 设置为目标速度
-       PWM_set_HIN1_Duty(duty_test);
-        //delay_1ms(500);
-        LIN1_HIGH(); // LIN1(PA9) 设置为常高 (100%) 
-        LIN2_LOW(); // LIN2(PA8) 设置为常低 (0%)
-        delay_1ms(100);
-        PWM_set_HIN2_Duty(0); // HIN2(PB13) 设置为目标速度
-
+        motor_state = MOTOR_STATE_FORWARD;
+        
+        // 计算开环初始占空比（基于83%→4500RPM）
+        uint8_t initial_duty = (uint8_t)((speed * DUTY_AT_4500RPM) / RPM_AT_83DUTY);
+        if (initial_duty > 100) initial_duty = 100;
+        
+        PWM_set_HIN1_Duty(initial_duty);  // 先设置PWM
+        LIN1_HIGH();  // LIN1(PA9) 设置为常高
+        LIN2_LOW();   // LIN2(PA8) 设置为常低
+        delay_1ms(100);  // 等待电平稳定
+        PWM_set_HIN2_Duty(0);  // HIN2(PB13) 关闭
+        
+        current_pwm_duty = initial_duty;
     }
     else //反转
     {
-        motor_state = MOTOR_STATE_REVERSE;// 更新电机状态
-        PWM_set_HIN1_Duty(0); // HIN1(PB14) 设置为目标速度
-        LIN2_HIGH(); // LIN2(PA8) 设置为常高 (100%)
-        LIN1_LOW(); // LIN1(PA9) 设置为常低 (0%)
-        PWM_set_HIN2_Duty(duty_test);
-        delay_1ms(100);
+        motor_state = MOTOR_STATE_REVERSE;
+        
+        // 计算开环初始占空比（基于83%→4500RPM）
+        uint8_t initial_duty = (uint8_t)((speed * DUTY_AT_4500RPM) / RPM_AT_83DUTY);
+        if (initial_duty > 100) initial_duty = 100;
+        
+        PWM_set_HIN1_Duty(0);  // HIN1(PB14) 关闭
+        LIN2_HIGH();  // LIN2(PA8) 设置为常高
+        LIN1_LOW();   // LIN1(PA9) 设置为常低
+        PWM_set_HIN2_Duty(initial_duty);  // 设置PWM
+        delay_1ms(100);  // 等待电平稳定
+        
+        current_pwm_duty = initial_duty;
+    }
+}
+
+
+
+void set_motor_pwm_duty(uint8_t duty, uint8_t direction)
+{
+    // 仅更新PWM占空比，GPIO状态在motor_set_speed()中已设置
+    if (direction == 0)
+    {
+        //PWM_set_HIN1_Duty(duty);
+        PWM_set_HIN1_Duty(duty);  // 先设置PWM
+        LIN1_HIGH();  // LIN1(PA9) 设置为常高
+        LIN2_LOW();   // LIN2(PA8) 设置为常低
+       // delay_1ms(100);  // 等待电平稳定
+        PWM_set_HIN2_Duty(0);  // HIN2(PB13) 关闭
+    }
+    else if (direction == 1)
+    {
+       // PWM_set_HIN2_Duty(duty);
+        PWM_set_HIN1_Duty(0);  // HIN1(PB14) 关闭
+        LIN2_HIGH();  // LIN2(PA8) 设置为常高
+        LIN1_LOW();   // LIN1(PA9) 设置为常低
+        PWM_set_HIN2_Duty(duty);  // 设置PWM
+        //delay_1ms(100);  // 等待电平稳定
+        
+    }
+}
+
+
+// 速度闭环控制函数（在主循环中调用）
+void speed_closed_loop_control(void)
+{
+    static uint32_t last_control_time = 0;
+    uint32_t current_time = get_system_tick();
+
+    // 控制周期：150ms（增大周期，减少震荡）
+    if (current_time - last_control_time < 150)
+    {
+        return;
+    }
+    last_control_time = current_time;
+
+    // 如果电机停止，不执行控制
+    if (motor_state == MOTOR_STATE_STOP || motor_state == MOTOR_STATE_BRAKE)
+    {
+        return;
     }
 
+    // 如果目标转速为0，不执行控制
+    if (target_speed == 0)
+    {
+        return;
+    }
+
+    // 获取原始RPM并进行滑动平均滤波
+    uint16_t raw_rpm = motor_rpm;
+    rpm_filter_buffer[rpm_filter_index] = raw_rpm;
+    rpm_filter_index = (rpm_filter_index + 1) % RPM_FILTER_SIZE;
+    if (rpm_filter_count < RPM_FILTER_SIZE)
+    {
+        rpm_filter_count++;
+    }
+
+    uint32_t rpm_sum = 0;
+    for (uint8_t i = 0; i < rpm_filter_count; i++)
+    {
+        rpm_sum += rpm_filter_buffer[i];
+    }
+    uint16_t filtered_rpm = (uint16_t)(rpm_sum / rpm_filter_count);
+    uint16_t actual_rpm = filtered_rpm;
+
+    // 计算误差
+    int32_t error = (int32_t)target_speed - (int32_t)actual_rpm;
+
+    // 死区控制：误差小于150RPM时不进行PID调整（扩大死区避免震荡）
+    if (error > -150 && error < 150)
+    {
+        error = 0;
+    }
+
+    // PID计算
+    float p_term = pid_kp * (float)error;
+    pid_integral += error;
+
+    // 积分限幅，防止积分饱和（扩大限幅范围）
+    if (pid_integral > 5000) pid_integral = 5000;
+    if (pid_integral < -5000) pid_integral = -5000;
+
+    float i_term = pid_ki * (float)pid_integral;
+    float d_term = pid_kd * (float)(error - pid_last_error);
+
+    float output = p_term + i_term + d_term;
+    pid_last_error = error;
+
+    // 计算新的PWM占空比（基于开环初始值 + PID输出）
+    int32_t base_duty = (int32_t)((target_speed * DUTY_AT_4500RPM) / RPM_AT_83DUTY);
+    int32_t new_pwm_duty = base_duty + (int32_t)output;
+
+    // 限幅
+    if (new_pwm_duty < MIN_DUTY) new_pwm_duty = MIN_DUTY;
+    if (new_pwm_duty > 100) new_pwm_duty = 100;
+
+    // 占空比变化限幅：每次最多变化5%（避免突变导致震荡）
+    int32_t duty_change = new_pwm_duty - (int32_t)current_pwm_duty;
+    if (duty_change > 5) duty_change = 5;
+    if (duty_change < -5) duty_change = -5;
+    current_pwm_duty = (uint8_t)((int32_t)current_pwm_duty + duty_change);
+
+    // 直接设置PWM（不调用包含延时的函数）
+    if (motor_state == MOTOR_STATE_FORWARD)
+    {
+       // PWM_set_HIN1_Duty(current_pwm_duty);
+       set_motor_pwm_duty(current_pwm_duty, 0);
+    }
+    else if (motor_state == MOTOR_STATE_REVERSE)
+    {
+       // PWM_set_HIN2_Duty(current_pwm_duty);
+       set_motor_pwm_duty(current_pwm_duty, 1);
+    }
+
+    // 调试输出
+    printf("T:%d A:%d F:%d E:%d Pwm:%d\n",
+           target_speed, raw_rpm, filtered_rpm, (int)error, (int)current_pwm_duty);
 }
 
 /**
@@ -439,21 +536,6 @@ void motor_brake(void)
 void motor_stop(void)
 {
     motor_state = MOTOR_STATE_STOP;
-    #if 0
-
-    // 强制将所有通道的占空比设置为 0
-    // 使用库函数直接设置比较寄存器值，避免使用带取反逻辑的HIN设置函数
-    timer_channel_output_pulse_value_config(TIMER0, TIMER_CH_0, 0); // LIN2 & HIN2
-    timer_channel_output_pulse_value_config(TIMER0, TIMER_CH_1, 0); // LIN1 & HIN1
-
-    // 关闭所有通道的输出使能
-    PWM_LIN2_Enable(0);
-    PWM_HIN2_Enable(0);
-    PWM_LIN1_Enable(0);
-    PWM_HIN1_Enable(0);
-    #endif
-
-
 
     PWM_set_HIN1_Duty(0); // HIN1(PB14) 设置为目标速度
     PWM_set_HIN2_Duty(0); // HIN2(PB13) 设置为目标速度
@@ -479,7 +561,7 @@ void motor_over_current_process(void)
     uint16_t current = read_motor_current();
     if (current > MAX_CURRENT) 
     {
-        motor_brake();
+        motor_stop();
         printf("\r\nOvercurrent detected: %d mA", current);
     }
     
