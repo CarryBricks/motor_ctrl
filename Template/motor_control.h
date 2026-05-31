@@ -64,7 +64,7 @@ typedef enum {
 } control_mode_t;
 
 // 电机参数定义
-#define MAX_SPEED            4700         //1000    // 最大速度 (RPM)
+#define MAX_SPEED           5300 // 4700         //1000    // 最大速度 (RPM)
 #define MAX_CURRENT          3000    // 最大电流 (mA)
 #define MAX_STROKE           10000   // 最大行程 (脉冲数)
 
@@ -88,6 +88,7 @@ extern volatile uint16_t actual_speed;
 void motor_control_test(uint8_t cmd);
 void motor_over_current_process(void);
 
+void speed_closed_loop_control(void);
 
 
 

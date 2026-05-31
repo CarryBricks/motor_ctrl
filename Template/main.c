@@ -49,6 +49,7 @@ OF SUCH DAMAGE.
 #include "led_control.h"
 #include "key_button.h"
 #include "hub_reset.h"
+#include "test_pa5_pa6_adc.h"
 
 
 // 函数声明
@@ -221,6 +222,7 @@ int main(void)
     /* Modbus initialization */
     modbus_init();
    motor_set_speed(1000, 0); //测试：反转100%速度
+	 //test_pa5_pa6_adc();
     while (1 )
 	{
 
@@ -228,7 +230,7 @@ int main(void)
         /* scan key buttons for motor control */
       key_scan();
         /* process motor overcurrent protection */
-        //motor_over_current_process();
+        motor_over_current_process();
         /* process Hall sensor data */
       hall_sensor_process();
         /* handle temperature overheat condition */

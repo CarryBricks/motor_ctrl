@@ -35,11 +35,19 @@ OF SUCH DAMAGE.
 #include "current_sensor.h"
 #include "systick.h"
 #include "motor_control.h"
+#include "stdio.h"
 
 // 全局变量
 volatile uint16_t current_value = 0;
 volatile uint16_t current_adc1_value = 0;
 volatile uint16_t current_adc2_value = 0;
+
+// 滑动窗口滤波参数
+#define FILTER_WINDOW_SIZE  10
+static uint16_t adc_filter_buffer[FILTER_WINDOW_SIZE] = {0};  // 滤波缓冲区
+static uint8_t adc_filter_index = 0;                           // 当前缓冲区索引
+static uint32_t adc_filter_sum = 0;                            // 当前缓冲区总和
+static uint8_t adc_filter_count = 0;                           // 当前有效数据个数
 
 /*!
     \brief      current sensor initialization
@@ -82,7 +90,8 @@ void current_sensor_init(void)
     adc_routine_channel_config(ADC0, 1, CURRENT_ADC2_CHANNEL, ADC_SAMPLETIME_55POINT5);
     
     /* ADC trigger config */
-    adc_external_trigger_source_config(ADC0, ADC_ROUTINE_CHANNEL, ADC0_1_EXTTRIG_ROUTINE_T1_CH1);
+    //adc_external_trigger_source_config(ADC0, ADC_ROUTINE_CHANNEL, ADC0_1_EXTTRIG_ROUTINE_T1_CH1);
+    adc_external_trigger_source_config(ADC0, ADC_ROUTINE_CHANNEL, ADC0_1_2_EXTTRIG_ROUTINE_NONE);
     adc_external_trigger_config(ADC0, ADC_ROUTINE_CHANNEL, ENABLE);
     
     /* enable ADC interface */
@@ -111,20 +120,66 @@ uint16_t read_motor_current(void)
     /* read ADC values - both channels */
     uint16_t adc1_value = adc_routine_data_read(ADC0);
     uint16_t adc2_value = adc_routine_data_read(ADC0);
+
+
+    //printf("ADC1=%d, ADC2=%d\n", adc1_value, adc2_value);
+
     
+
     /* store individual ADC values */
     current_adc1_value = adc1_value;
     current_adc2_value = adc2_value;
     
     /* use the average of two channels for current calculation */
-    uint16_t adc_value = (adc1_value + adc2_value) / 2;
+    uint16_t raw_adc_value = (adc1_value + adc2_value) / 2;
+    
+    /* 滑动窗口滤波：当adc1_value或adc2_value为0时不计入 */
+    uint16_t adc_value = 0;
+    if (adc1_value != 0 && adc2_value != 0)
+    {
+        // 从总和中减去即将被替换的旧值
+        adc_filter_sum -= adc_filter_buffer[adc_filter_index];
+        
+        // 存储新值到缓冲区
+        adc_filter_buffer[adc_filter_index] = raw_adc_value;
+        
+        // 将新值加入总和
+        adc_filter_sum += raw_adc_value;
+        
+        // 更新索引
+        adc_filter_index = (adc_filter_index + 1) % FILTER_WINDOW_SIZE;
+        
+        // 更新有效数据个数（达到窗口大小后保持不变）
+        if (adc_filter_count < FILTER_WINDOW_SIZE)
+        {
+            adc_filter_count++;
+        }
+        
+        // 计算平均值
+        adc_value = (uint16_t)(adc_filter_sum / adc_filter_count);
+    }
+    else
+    {
+        // 如果任一通道为0，使用上一次的滤波值（保持稳定）
+        // 如果是第一次且值为0，使用原始值
+        if (adc_filter_count > 0)
+        {
+            adc_value = (uint16_t)(adc_filter_sum / adc_filter_count);
+        }
+        else
+        {
+            adc_value = raw_adc_value;
+        }
+    }
     
     /* convert ADC value to current (mA) */
     /* assuming 10mΩ shunt resistor and 30x gain */
-    uint16_t current = (adc_value * 3300) / 4096; // mV
+    double  current = ((double)(adc_value) * 3300) / 4096; // mV
     current = (current * 1000) / (30 * 10); // mA
     
     current_value = current;
+
+    printf("motor Current=%f mA\n", current);
     
     /* check for stall current */
     check_stall_current();
@@ -146,7 +201,7 @@ void check_stall_current(void)
     /* only check if motor is running */
     if (state == MOTOR_STATE_FORWARD || state == MOTOR_STATE_REVERSE) 
     {
-        /* check both ADC channels for stall current */
+        /* check both ADC cchannels for stall current */
         uint16_t adc1_current = (current_adc1_value * 3300) / 4096; // mV
         adc1_current = (adc1_current * 1000) / (30 * 10); // mA
         
@@ -166,3 +221,77 @@ void check_stall_current(void)
 }
 
 
+
+
+
+#if  0
+void adc_config(void)
+{
+    adc_mode_config(ADC_MODE_FREE);
+    adc_special_function_config(ADC0, ADC_CONTINUOUS_MODE, ENABLE);
+    adc_special_function_config(ADC0, ADC_SCAN_MODE, ENABLE);
+    adc_data_alignment_config(ADC0, ADC_DATAALIGN_RIGHT);
+
+    // 两路通道
+    adc_channel_length_config(ADC0, ADC_ROUTINE_CHANNEL, 2);
+
+    // ===================== 关键修改 =====================
+    // 通道0：PA5 = ADC_CHANNEL_5
+    adc_routine_channel_config(ADC0, 0, ADC_CHANNEL_5, ADC_SAMPLETIME_55POINT5);
+    // 通道1：PA6 = ADC_CHANNEL_6
+    adc_routine_channel_config(ADC0, 1, ADC_CHANNEL_6, ADC_SAMPLETIME_55POINT5);
+    // ====================================================
+
+    adc_external_trigger_source_config(ADC0, ADC_ROUTINE_CHANNEL, ADC0_1_2_EXTTRIG_ROUTINE_NONE);
+    adc_external_trigger_config(ADC0, ADC_ROUTINE_CHANNEL, ENABLE);
+
+    // 关闭内部传感器（我们用外部引脚）
+    // adc_tempsensor_vrefint_enable(); 
+
+    adc_dma_mode_enable(ADC0);
+    adc_enable(ADC0);
+    delay_1ms(1);
+    adc_calibration_enable(ADC0);
+
+    adc_software_trigger_enable(ADC0, ADC_ROUTINE_CHANNEL);
+}
+
+void dma_config(void)
+{
+    dma_parameter_struct dma_data_parameter;
+
+    dma_deinit(DMA0, DMA_CH0);
+
+    dma_data_parameter.periph_addr  = (uint32_t)(&ADC_RDATA(ADC0));
+    dma_data_parameter.periph_inc   = DMA_PERIPH_INCREASE_DISABLE;
+    dma_data_parameter.memory_addr  = (uint32_t)(&adc_value);
+    dma_data_parameter.memory_inc   = DMA_MEMORY_INCREASE_ENABLE;
+    dma_data_parameter.periph_width = DMA_PERIPHERAL_WIDTH_16BIT;
+    dma_data_parameter.memory_width = DMA_MEMORY_WIDTH_16BIT;
+    dma_data_parameter.direction    = DMA_PERIPHERAL_TO_MEMORY;
+    dma_data_parameter.number       = 2;
+    dma_data_parameter.priority     = DMA_PRIORITY_HIGH;
+    dma_init(DMA0, DMA_CH0, &dma_data_parameter);
+
+    dma_circulation_enable(DMA0, DMA_CH0);
+    dma_channel_enable(DMA0, DMA_CH0);
+}
+
+
+// 新增：配置 PA5 PA6 为模拟输入
+void gpio_config(void)
+{
+    rcu_periph_clock_enable(RCU_GPIOA);
+    gpio_init(GPIOA, GPIO_MODE_AIN, GPIO_OSPEED_50MHZ, GPIO_PIN_5 | GPIO_PIN_6);
+}
+
+void rcu_config(void)
+{
+    /* enable ADC clock */
+    rcu_periph_clock_enable(RCU_ADC0);
+    /* config ADC clock */
+    rcu_adc_clock_config(RCU_CKADC_CKAPB2_DIV4);
+    /* enable DMA0 clock */
+    rcu_periph_clock_enable(RCU_DMA0);
+}
+#endif

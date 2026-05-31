@@ -125,7 +125,7 @@ void EXTI5_9_IRQHandler(void)
             uint32_t pulse_diff = hall_count - last_pulse_count;
             last_pulse_count = hall_count;
             motor_rpm = (pulse_diff * 600) / 4;
-            printf("RPM=%d\n", motor_rpm);
+           // printf("RPM=%d\n", motor_rpm);
         }
     }
 #endif

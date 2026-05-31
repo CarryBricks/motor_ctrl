@@ -373,63 +373,30 @@ void motor_set_speed(uint16_t speed, bool direction)
     //uint16_t duty = (speed * 999) / MAX_SPEED;
     uint8_t duty = (uint8_t)((speed * 100) / MAX_SPEED); // 0-100
 
-    // 安全关断：在切换状态前，强制将所有通道占空比设为0并关闭
-    // 防止H桥上下管直通短路
-    // PWM_set_LIN1_Duty(0);
-    // PWM_set_HIN1_Duty(0);
-    // PWM_set_LIN2_Duty(0);
-    // PWM_set_HIN2_Duty(0);
-
-    // PWM_LIN2_Enable(0); 
-    // PWM_HIN2_Enable(0);
-    // PWM_LIN1_Enable(0);
-    // PWM_HIN1_Enable(0);   
-
 
 
     //根据方向设置电机状态和PWM输出
+    static uint8_t duty_test = 83;
     if (direction == 0) //正转
     {
         motor_state = MOTOR_STATE_FORWARD;// 更新电机状态
-
-        //  // 设置正转所需的PWM
-        // PWM_set_HIN1_Duty(duty); // HIN1(PB14) 设置为目标速度
-        // PWM_set_LIN2_Duty(100); // LIN2(PA8) 设置为常高 (100%)
-        // // 开启正转所需的通道
-        // PWM_HIN1_Enable(1);  
-        // PWM_LIN2_Enable(1);        
-
-
-        PWM_set_HIN1_Duty(83); // HIN1(PB14) 设置为目标速度
-        LIN1_HIGH(); // LIN1(PA9) 设置为常高 (100%)
+       // PWM_set_HIN1_Duty(83); // HIN1(PB14) 设置为目标速度
+       PWM_set_HIN1_Duty(duty_test);
+        //delay_1ms(500);
+        LIN1_HIGH(); // LIN1(PA9) 设置为常高 (100%) 
         LIN2_LOW(); // LIN2(PA8) 设置为常低 (0%)
+        delay_1ms(100);
         PWM_set_HIN2_Duty(0); // HIN2(PB13) 设置为目标速度
-
-        //delay_1ms(10000);
-        //motor_stop();
 
     }
     else //反转
     {
         motor_state = MOTOR_STATE_REVERSE;// 更新电机状态
-        #if 0
-        // 设置反转所需的PWM
-        PWM_set_HIN2_Duty(duty); // HIN2(PB13) 设置为目标速度
-        PWM_set_LIN1_Duty(100); // LIN1(PA9) 设置为常高 (100%)
-
-        // 开启反转所需的通道
-        PWM_HIN2_Enable(1);
-        PWM_LIN1_Enable(1);
-        #endif
         PWM_set_HIN1_Duty(0); // HIN1(PB14) 设置为目标速度
         LIN2_HIGH(); // LIN2(PA8) 设置为常高 (100%)
         LIN1_LOW(); // LIN1(PA9) 设置为常低 (0%)
-        PWM_set_HIN2_Duty(90); // HIN2(PB13) 设置为目标速度
-
-        //delay_1ms(10000);
-        //motor_stop();
-
-
+        PWM_set_HIN2_Duty(duty_test);
+        delay_1ms(100);
     }
 
 }
