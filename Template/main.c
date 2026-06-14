@@ -224,16 +224,16 @@ int main(void)
 		
 		
 	
-  static uint8_t direction = 0;
-  static uint16_t target_speed = 2000;
-   motor_set_speed(target_speed, direction); //测试：反转100%速度
+ // static uint8_t direction = 0;
+ // static uint16_t target_speed = 2000;
+//   motor_set_speed(target_speed, direction); //测试：反转100%速度
 	 //test_pa5_pa6_adc();
     while (1 )
 	{
 
 
         /* scan key buttons for motor control */
-      key_scan();
+         key_scan();
         /* process motor overcurrent protection */
         motor_over_current_process();
         /* process Hall sensor data */
@@ -244,7 +244,7 @@ int main(void)
       position_detect_process();
       /* speed closed loop control */
       speed_closed_loop_control();
-
+      modbus_process();
 
       //current_sensor_init_origin();
      // printf_adc_val0_and_val1_per_second();

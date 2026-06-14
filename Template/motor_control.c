@@ -40,6 +40,7 @@ OF SUCH DAMAGE.
 #include "gd32f30x.h"
 #include <stdio.h>
 #include "stroke_counter.h"
+#include "modbus.h"
 
 // LIN1 = PA9 普通GPIO
 #define LIN1_HIGH()    gpio_bit_set(GPIOA, GPIO_PIN_9)
@@ -87,13 +88,14 @@ void motor_gpio_init(void)
 // 全局变量
 volatile motor_state_t motor_state = MOTOR_STATE_STOP;
 volatile control_mode_t control_mode = MODE_CLOSED_LOOP;  // 默认使用闭环模式
-volatile uint16_t target_speed = 0;
+volatile uint16_t target_speed = 500;
 volatile uint8_t current_pwm_duty = 0;  // 当前PWM占空比
 
 // 开环控制参数（83%占空比→4500RPM）
 #define DUTY_AT_4500RPM  83
 #define RPM_AT_83DUTY    4500
 #define MIN_DUTY         20  // 最小占空比，确保电机能启动
+#define MIN_OPERATING_DUTY  8  // 运行中最低占空比，防止低速停转
 
 // PID控制参数（优化：减少震荡，加快收敛）
 static float pid_kp = 0.012f;    // 比例系数（增大）
@@ -111,6 +113,13 @@ static uint8_t rpm_filter_count = 0;
 // 外部变量声明
 extern volatile uint16_t motor_rpm;  // 实际转速（来自hall_sensor）
 
+// 转速渐变参数
+#define SPEED_RAMP_STEP     200     // 每个控制周期(150ms)的RPM变化步进
+static int32_t speed_ramp_target = 0;  // 当前渐变目标值
+static uint8_t ramp_stopping = 0;      // 渐变停止标志
+static uint8_t pending_dir_change = 0;
+static bool pending_direction = 0;
+static uint16_t pending_speed = 0;
 
 //函数声明
 void PWM_LIN2_Enable(bool enable);
@@ -315,63 +324,67 @@ void PWM_HIN1_Enable(bool enable)
  */
 void motor_set_speed(uint16_t speed, bool direction)
 {
-   // 1. 行程保护：检查是否达到最大行程，若达到则停止电机
     uint32_t stroke_count = get_stroke_count();
-    if (stroke_count >= MAX_STROKE) 
+    if (stroke_count >= MAX_STROKE)
     {
-        motor_stop();
-        return;
+        stroke_counter_reset();
     }
-    if (speed == 0) 
-    {
-        motor_stop();
-        return;
-    }
-    //参数校验：确保速度不超过最大值
+
     if (speed > MAX_SPEED)
     {
         speed = MAX_SPEED;
     }
 
-    // 设置目标转速
+    uint8_t was_running = (motor_state == MOTOR_STATE_FORWARD || motor_state == MOTOR_STATE_REVERSE);
+    uint8_t same_direction = was_running && 
+        ((direction == 0 && motor_state == MOTOR_STATE_FORWARD) || 
+         (direction == 1 && motor_state == MOTOR_STATE_REVERSE));
+
+    if (was_running && !same_direction)
+    {
+        printf("\r\n[D] change dir: pending {%d,%d}", direction, speed);
+        pending_dir_change = 1;
+        pending_direction = direction;
+        pending_speed = speed;
+        motor_stop_ramp();
+        return;
+    }
+
+    pending_dir_change = 0;
+    ramp_stopping = 0;
     target_speed = speed;
 
-    // 重置PID控制器
-    pid_integral = 0;
-    pid_last_error = 0;
+    if (!was_running || !same_direction)
+    {
+        pid_integral = 0;
+        pid_last_error = 0;
 
-    // 根据方向设置电机状态和GPIO电平
-    if (direction == 0) //正转
-    {
-        motor_state = MOTOR_STATE_FORWARD;
-        
-        // 计算开环初始占空比（基于83%→4500RPM）
-        uint8_t initial_duty = (uint8_t)((speed * DUTY_AT_4500RPM) / RPM_AT_83DUTY);
-        if (initial_duty > 100) initial_duty = 100;
-        
-        PWM_set_HIN1_Duty(initial_duty);  // 先设置PWM
-        LIN1_HIGH();  // LIN1(PA9) 设置为常高
-        LIN2_LOW();   // LIN2(PA8) 设置为常低
-        delay_1ms(100);  // 等待电平稳定
-        PWM_set_HIN2_Duty(0);  // HIN2(PB13) 关闭
-        
-        current_pwm_duty = initial_duty;
-    }
-    else //反转
-    {
-        motor_state = MOTOR_STATE_REVERSE;
-        
-        // 计算开环初始占空比（基于83%→4500RPM）
-        uint8_t initial_duty = (uint8_t)((speed * DUTY_AT_4500RPM) / RPM_AT_83DUTY);
-        if (initial_duty > 100) initial_duty = 100;
-        
-        PWM_set_HIN1_Duty(0);  // HIN1(PB14) 关闭
-        LIN2_HIGH();  // LIN2(PA8) 设置为常高
-        LIN1_LOW();   // LIN1(PA9) 设置为常低
-        PWM_set_HIN2_Duty(initial_duty);  // 设置PWM
-        delay_1ms(100);  // 等待电平稳定
-        
-        current_pwm_duty = initial_duty;
+        if (direction == 0)
+        {
+            motor_state = MOTOR_STATE_FORWARD;
+
+            PWM_set_HIN1_Duty(MIN_DUTY);
+            LIN1_HIGH();
+            LIN2_LOW();
+            delay_1ms(50);
+            PWM_set_HIN2_Duty(0);
+
+            current_pwm_duty = MIN_DUTY;
+            speed_ramp_target = 0;
+        }
+        else
+        {
+            motor_state = MOTOR_STATE_REVERSE;
+
+            PWM_set_HIN1_Duty(0);
+            LIN2_HIGH();
+            LIN1_LOW();
+            PWM_set_HIN2_Duty(MIN_DUTY);
+            delay_1ms(50);
+
+            current_pwm_duty = MIN_DUTY;
+            speed_ramp_target = 0;
+        }
     }
 }
 
@@ -421,13 +434,6 @@ void speed_closed_loop_control(void)
         return;
     }
 
-    // 如果目标转速为0，不执行控制
-    if (target_speed == 0)
-    {
-        return;
-    }
-
-    // 获取原始RPM并进行滑动平均滤波
     uint16_t raw_rpm = motor_rpm;
     rpm_filter_buffer[rpm_filter_index] = raw_rpm;
     rpm_filter_index = (rpm_filter_index + 1) % RPM_FILTER_SIZE;
@@ -443,9 +449,50 @@ void speed_closed_loop_control(void)
     }
     uint16_t filtered_rpm = (uint16_t)(rpm_sum / rpm_filter_count);
     uint16_t actual_rpm = filtered_rpm;
+    actual_speed = actual_rpm;
 
-    // 计算误差
-    int32_t error = (int32_t)target_speed - (int32_t)actual_rpm;
+    if (ramp_stopping && speed_ramp_target <= 0 && (actual_rpm < 100 || current_pwm_duty == 0))
+    {
+        printf("\r\n[D] ramp_stop done, pending=%d rpm=%d", pending_dir_change, actual_rpm);
+        ramp_stopping = 0;
+        motor_stop();
+        if (pending_dir_change) {
+            pending_dir_change = 0;
+            printf("\r\n[D] restarting reverse: %d", pending_speed);
+            motor_set_speed(pending_speed, pending_direction);
+        }
+        return;
+    }
+
+    if (ramp_stopping) {
+        speed_ramp_target -= SPEED_RAMP_STEP;
+        if (speed_ramp_target < 0)
+        {
+            speed_ramp_target = 0;
+        }
+    } else if (speed_ramp_target < (int32_t)target_speed)
+    {
+        speed_ramp_target += SPEED_RAMP_STEP;
+        if (speed_ramp_target > (int32_t)target_speed)
+        {
+            speed_ramp_target = target_speed;
+        }
+    }
+    else if (speed_ramp_target > (int32_t)target_speed)
+    {
+        speed_ramp_target -= SPEED_RAMP_STEP;
+        if (speed_ramp_target < (int32_t)target_speed)
+        {
+            speed_ramp_target = target_speed;
+        }
+    }
+
+    if (speed_ramp_target <= 0 && actual_rpm < 30 && ramp_stopping)
+    {
+        return;
+    }
+
+    int32_t error = (int32_t)speed_ramp_target - (int32_t)actual_rpm;
 
     // 死区控制：误差小于150RPM时不进行PID调整（扩大死区避免震荡）
     if (error > -150 && error < 150)
@@ -468,17 +515,21 @@ void speed_closed_loop_control(void)
     pid_last_error = error;
 
     // 计算新的PWM占空比（基于开环初始值 + PID输出）
-    int32_t base_duty = (int32_t)((target_speed * DUTY_AT_4500RPM) / RPM_AT_83DUTY);
+    int32_t base_duty = (int32_t)((speed_ramp_target * DUTY_AT_4500RPM) / RPM_AT_83DUTY);
     int32_t new_pwm_duty = base_duty + (int32_t)output;
 
-    // 限幅
-    if (new_pwm_duty < MIN_DUTY) new_pwm_duty = MIN_DUTY;
+    if (ramp_stopping) {
+        if (new_pwm_duty < 0) new_pwm_duty = 0;
+    } else if (error < 0) {
+        if (new_pwm_duty < MIN_OPERATING_DUTY) new_pwm_duty = MIN_OPERATING_DUTY;
+    } else {
+        if (new_pwm_duty < MIN_DUTY) new_pwm_duty = MIN_DUTY;
+    }
     if (new_pwm_duty > 100) new_pwm_duty = 100;
 
-    // 占空比变化限幅：每次最多变化5%（避免突变导致震荡）
     int32_t duty_change = new_pwm_duty - (int32_t)current_pwm_duty;
     if (duty_change > 5) duty_change = 5;
-    if (duty_change < -5) duty_change = -5;
+    if (duty_change < -10) duty_change = -10;
     current_pwm_duty = (uint8_t)((int32_t)current_pwm_duty + duty_change);
 
     // 直接设置PWM（不调用包含延时的函数）
@@ -493,9 +544,13 @@ void speed_closed_loop_control(void)
        set_motor_pwm_duty(current_pwm_duty, 1);
     }
 
-    // 调试输出
+    // 调试输出 - 与modbus_upload_status共用USART1会污染上位机帧，已禁用
+#if 0
     printf("T:%d A:%d F:%d E:%d Pwm:%d\n",
            target_speed, raw_rpm, filtered_rpm, (int)error, (int)current_pwm_duty);
+#endif
+
+    modbus_upload_status();
 }
 
 /**
@@ -537,15 +592,21 @@ void motor_stop(void)
 {
     motor_state = MOTOR_STATE_STOP;
 
-    PWM_set_HIN1_Duty(0); // HIN1(PB14) 设置为目标速度
-    PWM_set_HIN2_Duty(0); // HIN2(PB13) 设置为目标速度
+    PWM_set_HIN1_Duty(0);
+    PWM_set_HIN2_Duty(0);
     delay_1ms(1);
-    LIN1_LOW(); // LIN1(PA9) 设置为常高 (100%)
-    LIN2_LOW(); // LIN2(PA8) 设置为常低 (0%)
-
-
+    LIN1_LOW();
+    LIN2_LOW();
 }
 
+void motor_stop_ramp(void)
+{
+    if (motor_state == MOTOR_STATE_STOP || motor_state == MOTOR_STATE_BRAKE)
+    {
+        return;
+    }
+    ramp_stopping = 1;
+}
 
 
 

@@ -68,17 +68,12 @@ typedef enum {
 #define MAX_CURRENT          3000    // 最大电流 (mA)
 #define MAX_STROKE           10000   // 最大行程 (脉冲数)
 
-// Modbus命令定义
-#define CMD_STOP             0x00    // 停止
-#define CMD_FORWARD          0x01    // 正向运行
-#define CMD_REVERSE          0x02    // 反向运行
-#define CMD_BRAKE            0x03    // 刹车
-
 // 函数声明
 void motor_control_init(void);
 void motor_set_speed(uint16_t speed, bool direction);
 void motor_brake(void);
 void motor_stop(void);
+void motor_stop_ramp(void);
 void speed_closed_loop_control(void);
 
 // 外部变量声明

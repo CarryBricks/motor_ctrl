@@ -47,7 +47,7 @@ OF SUCH DAMAGE.
 #define KEY_LONG_PRESS_TIME       3000
 #define KEY_SCAN_INTERVAL         10
 #define MOTOR_STEP_PULSE_TIME     50
-#define MOTOR_CONTINUOUS_SPEED    200
+#define MOTOR_CONTINUOUS_SPEED    4000
 
 extern volatile uint8_t forward_key_pressed;
 extern volatile uint8_t reverse_key_pressed;

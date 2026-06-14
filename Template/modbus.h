@@ -37,38 +37,32 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include "gd32f30x.h"
 
-// Modbus配置
-#define MODBUS_SLAVE_ID      0x01
-#define MODBUS_BAUDRATE      115200
-#define MODBUS_TIMEOUT       1000
+// 协议帧边界
+#define CUSTOM_SOF          0xA5
+#define CUSTOM_EOF          0x5A
 
-// Modbus功能码
-#define MODBUS_FC_READ_COILS            0x01
-#define MODBUS_FC_READ_DISCRETE_INPUTS  0x02
-#define MODBUS_FC_READ_HOLDING_REGS     0x03
-#define MODBUS_FC_READ_INPUT_REGS       0x04
-#define MODBUS_FC_WRITE_SINGLE_COIL     0x05
-#define MODBUS_FC_WRITE_SINGLE_REG      0x06
-#define MODBUS_FC_WRITE_MULTIPLE_COILS  0x0F
-#define MODBUS_FC_WRITE_MULTIPLE_REGS   0x10
+// 设备配置
+#define SLAVE_ADDR           0x01
+#define CUSTOM_BAUDRATE      115200
+#define CUSTOM_TIMEOUT       1000
 
-// Modbus错误码
-#define MODBUS_ERR_ILLEGAL_FUNCTION       0x01
-#define MODBUS_ERR_ILLEGAL_DATA_ADDRESS   0x02
-#define MODBUS_ERR_ILLEGAL_DATA_VALUE     0x03
-#define MODBUS_ERR_SLAVE_DEVICE_FAILURE   0x04
+// 功能码
+#define FC_CONTROL          0x03
+#define FC_RESPONSE         0x81
+#define FC_EVENT            0x82
 
-// Modbus寄存器地址
-#define REG_MOTOR_MODE         0x0000
-#define REG_MOTOR_SPEED        0x0001
-#define REG_MOTOR_STATE        0x0002
-#define REG_MOTOR_CURRENT      0x0003
-#define REG_MOTOR_STROKE       0x0004
-#define REG_MOTOR_CONTROL      0x0005
+// 控制命令
+#define CMD_FORWARD         0x0001
+#define CMD_REVERSE         0x0002
+#define CMD_STOP            0x0003
+
+// 事件类型
+#define EVENT_STALL         0x0001
 
 // 函数声明
 void modbus_init(void);
 void modbus_process(void);
-void modbus_send_response(uint8_t *buffer, uint16_t length);
+void modbus_upload_status(void);
+void modbus_send_event(uint8_t event_type, uint16_t current);
 
 #endif

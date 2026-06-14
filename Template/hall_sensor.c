@@ -125,7 +125,7 @@ void EXTI5_9_IRQHandler(void)
             uint32_t pulse_diff = hall_count - last_pulse_count;
             last_pulse_count = hall_count;
             motor_rpm = (pulse_diff * 600) / 4;
-            printf("RPM=%d\n", motor_rpm);
+            //printf("RPM=%d\n", motor_rpm);
         }
     }
 #endif
@@ -195,7 +195,7 @@ void hall_sensor_update(void)
     uint8_t current_state = (hall_a << 1) | hall_b;
     uint8_t current_hall_ab_state = (hall_a << 1) | hall_b;
 
-    printf("hall_a=%d, hall_b=%d\n", hall_a, hall_b);
+    //printf("hall_a=%d, hall_b=%d\n", hall_a, hall_b);
 
     if (hall_a == 1 && hall_b == 1)
     {
@@ -203,7 +203,7 @@ void hall_sensor_update(void)
         uint32_t current_time = get_system_tick();
         if (current_time - hall_11_count_last_time >= 1000)
         {
-            printf("Hall_11_count_per_second=%d\n", hall_11_count);
+            //printf("Hall_11_count_per_second=%d\n", hall_11_count);
             hall_11_count = 0;
             hall_11_count_last_time = current_time;
         }

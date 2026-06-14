@@ -48,18 +48,20 @@ typedef struct {
     key_state_t state;
     uint32_t press_start_time;
     uint8_t long_press_reported;
+    uint8_t debounce_cnt;
+    uint8_t last_raw;
 } key_info_t;
 
-static key_info_t forward_key = {KEY_STATE_IDLE, 0, 0};
-static key_info_t reverse_key = {KEY_STATE_IDLE, 0, 0};
+static key_info_t forward_key = {KEY_STATE_IDLE, 0, 0, 0, 0};
+static key_info_t reverse_key = {KEY_STATE_IDLE, 0, 0, 0, 0};
 
 void key_button_init(void)
 {
     rcu_periph_clock_enable(RCU_GPIOB);
     rcu_periph_clock_enable(RCU_GPIOC);
 
-    gpio_init(KEY_FORWARD_PORT, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, KEY_FORWARD_PIN);
-    gpio_init(KEY_REVERSE_PORT, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, KEY_REVERSE_PIN);
+    gpio_init(KEY_FORWARD_PORT, GPIO_MODE_IPU, GPIO_OSPEED_50MHZ, KEY_FORWARD_PIN);
+    gpio_init(KEY_REVERSE_PORT, GPIO_MODE_IPU, GPIO_OSPEED_50MHZ, KEY_REVERSE_PIN);
 
     led_init();
 }
@@ -68,10 +70,20 @@ static void key_update(key_info_t *key, uint8_t is_pressed, uint8_t direction)
 {
     uint32_t current_time = get_system_tick();
 
+    if (is_pressed == key->last_raw) {
+        if (key->debounce_cnt < 4) key->debounce_cnt++;
+    } else {
+        key->debounce_cnt = 0;
+        key->last_raw = is_pressed;
+        return;
+    }
+    if (key->debounce_cnt < 4) return;
+    uint8_t stable = is_pressed;
+
     switch (key->state) 
     {
         case KEY_STATE_IDLE:
-            if (is_pressed) 
+            if (stable) 
             {
                 key->state = KEY_STATE_PRESSED;
                 key->press_start_time = current_time;
@@ -80,7 +92,7 @@ static void key_update(key_info_t *key, uint8_t is_pressed, uint8_t direction)
             break;
 
         case KEY_STATE_PRESSED:
-            if (is_pressed) 
+            if (stable) 
             {
                 uint32_t press_duration = current_time - key->press_start_time;
                 if (press_duration >= KEY_LONG_PRESS_TIME) 
@@ -91,7 +103,6 @@ static void key_update(key_info_t *key, uint8_t is_pressed, uint8_t direction)
                     if (direction == 0) 
                     {
                         led_on(LED_FORWARD);
-											  printf("\r\n key long Forward pressed");
                     } 
                     else 
                     {
@@ -107,8 +118,7 @@ static void key_update(key_info_t *key, uint8_t is_pressed, uint8_t direction)
                 {
                     motor_set_speed(MOTOR_CONTINUOUS_SPEED, direction);
                     delay_1ms(MOTOR_STEP_PULSE_TIME);
-                    motor_stop();
-									  printf("\r\n key long Reverse pressed");
+                    motor_stop();  
                     
                 }
                 key->state = KEY_STATE_IDLE;
@@ -116,18 +126,16 @@ static void key_update(key_info_t *key, uint8_t is_pressed, uint8_t direction)
             break;
 
         case KEY_STATE_LONG_PRESSED:
-            if (!is_pressed) 
+            if (!stable) 
             {
                 motor_stop();
                 if (direction == 0) 
                 {
                     led_off(LED_FORWARD);
-									  printf("\r\n Reverse key released after long press");
                 } 
                 else 
                 {
                     led_off(LED_REVERSE);
-									 printf("\r\n Forward key released after long press");
                 }
                 key->state = KEY_STATE_IDLE;
                 

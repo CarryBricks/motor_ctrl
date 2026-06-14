@@ -37,6 +37,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "current_sensor.h"
 #include "stroke_counter.h"
 #include "systick.h"
+#include <stdio.h>
 
 // 全局变量
 static uint8_t modbus_rx_buffer[256];
@@ -51,8 +52,8 @@ void USART1_IRQHandler(void)
 
         if(modbus_rx_len < 256) {
             modbus_rx_buffer[modbus_rx_len++] = data;
-            modbus_last_time = get_system_tick();
         }
+        modbus_last_time = get_system_tick();
 
         usart_flag_clear(USART1, USART_FLAG_RBNE);
     }
@@ -67,7 +68,7 @@ void modbus_init(void)
     gpio_init(GPIOA, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_3);
 
     usart_deinit(USART1);
-    usart_baudrate_set(USART1, MODBUS_BAUDRATE);
+    usart_baudrate_set(USART1, CUSTOM_BAUDRATE);
     usart_word_length_set(USART1, USART_WL_8BIT);
     usart_stop_bit_set(USART1, USART_STB_1BIT);
     usart_parity_config(USART1, USART_PM_NONE);
@@ -99,140 +100,144 @@ static uint16_t modbus_crc(uint8_t *data, uint16_t length)
     return crc;
 }
 
-void modbus_send_response(uint8_t *buffer, uint16_t length)
+static void send_response_frame(uint8_t func, uint8_t *data, uint8_t data_len)
 {
-    for(uint16_t i = 0; i < length; i++) {
+    uint8_t frame[64];
+    uint16_t crc;
+
+    frame[0] = CUSTOM_SOF;
+    frame[1] = SLAVE_ADDR;
+    frame[2] = func;
+    frame[3] = data_len;
+
+    for(uint8_t i = 0; i < data_len; i++) {
+        frame[4 + i] = data[i];
+    }
+
+    crc = modbus_crc(&frame[2], 2 + data_len);
+    frame[4 + data_len] = crc & 0xFF;
+    frame[5 + data_len] = (crc >> 8) & 0xFF;
+    frame[6 + data_len] = CUSTOM_EOF;
+
+    for(uint16_t i = 0; i < 7 + data_len; i++) {
         while(RESET == usart_flag_get(USART1, USART_FLAG_TBE));
-        usart_data_transmit(USART1, buffer[i]);
+        usart_data_transmit(USART1, frame[i]);
     }
     while(RESET == usart_flag_get(USART1, USART_FLAG_TC));
 }
 
+void modbus_send_event(uint8_t event_type, uint16_t current)
+{
+    uint8_t data[4];
+    data[0] = (event_type >> 8) & 0xFF;
+    data[1] = event_type & 0xFF;
+    data[2] = (current >> 8) & 0xFF;
+    data[3] = current & 0xFF;
+    send_response_frame(FC_EVENT, data, 4);
+}
+
+void modbus_upload_status(void)
+{
+    uint8_t data[12];
+    uint32_t stroke = get_stroke_count();
+
+    data[0] = (motor_state >> 8) & 0xFF;
+    data[1] = motor_state & 0xFF;
+    data[2] = (current_value >> 8) & 0xFF;
+    data[3] = current_value & 0xFF;
+    data[4] = (actual_speed >> 8) & 0xFF;
+    data[5] = actual_speed & 0xFF;
+    data[6] = (stroke >> 8) & 0xFF;
+    data[7] = stroke & 0xFF;
+    data[8] = 0;
+    data[9] = 0;
+    data[10] = 0;
+    data[11] = (position_detected != 0) ? 1 : 0;
+
+#if 0
+    printf("\r\n[U] upload: state=%d cur=%d spd=%d strk=%d\n",
+           motor_state, current_value, actual_speed, (int)stroke);
+#endif
+    send_response_frame(FC_RESPONSE, data, 12);
+}
+
 void modbus_process(void)
 {
+    uint16_t i, frame_len, crc_calc, crc_recv;
+    uint8_t func, data_len;
+    uint16_t cmd, speed;
+
     if(modbus_rx_len == 0) {
         return;
     }
 
-    if(get_system_tick() - modbus_last_time > MODBUS_TIMEOUT) {
+    if(get_system_tick() - modbus_last_time > CUSTOM_TIMEOUT) {
         modbus_rx_len = 0;
         return;
     }
 
-    if(modbus_rx_len < 8) {
+    i = 0;
+    while(i < modbus_rx_len && modbus_rx_buffer[i] != CUSTOM_SOF) {
+        i++;
+    }
+    if(i > 0) {
+        for(uint16_t j = 0; j < modbus_rx_len - i; j++) {
+            modbus_rx_buffer[j] = modbus_rx_buffer[i + j];
+        }
+        modbus_rx_len -= i;
+    }
+
+    if(modbus_rx_len < 7) {
         return;
     }
 
-    if(modbus_rx_buffer[0] != MODBUS_SLAVE_ID) {
+    data_len = modbus_rx_buffer[3];
+    frame_len = 7 + data_len;
+    if(modbus_rx_len < frame_len) {
+        return;
+    }
+
+    if(modbus_rx_buffer[1] != SLAVE_ADDR) {
         modbus_rx_len = 0;
         return;
     }
 
-    uint16_t crc_received = (modbus_rx_buffer[modbus_rx_len-1] << 8) | modbus_rx_buffer[modbus_rx_len-2];
-    uint16_t crc_calculated = modbus_crc(modbus_rx_buffer, modbus_rx_len-2);
-
-    if(crc_received != crc_calculated) {
-        modbus_rx_len = 0;
+    if(modbus_rx_buffer[frame_len - 1] != CUSTOM_EOF) {
+        for(i = 0; i < modbus_rx_len - 1; i++) {
+            modbus_rx_buffer[i] = modbus_rx_buffer[i + 1];
+        }
+        modbus_rx_len--;
         return;
     }
 
-    uint8_t function_code = modbus_rx_buffer[1];
-    uint16_t start_address = (modbus_rx_buffer[2] << 8) | modbus_rx_buffer[3];
-    uint16_t quantity = (modbus_rx_buffer[4] << 8) | modbus_rx_buffer[5];
-
-    uint8_t response[256];
-    uint16_t response_len = 0;
-
-    switch(function_code) {
-        case MODBUS_FC_READ_HOLDING_REGS:
-            if(quantity > 125) {
-                response[0] = MODBUS_SLAVE_ID;
-                response[1] = function_code | 0x80;
-                response[2] = MODBUS_ERR_ILLEGAL_DATA_VALUE;
-                response_len = 3;
-            } else {
-                response[0] = MODBUS_SLAVE_ID;
-                response[1] = function_code;
-                response[2] = quantity * 2;
-                response_len = 3;
-
-                for(uint16_t i = 0; i < quantity; i++) {
-                    uint16_t address = start_address + i;
-                    uint16_t value = 0;
-
-                    switch(address) {
-                        case REG_MOTOR_MODE:
-                            value = (uint16_t)motor_state;
-                            break;
-                        case REG_MOTOR_SPEED:
-                            value = target_speed;
-                            break;
-                        case REG_MOTOR_STATE:
-                            value = (uint16_t)motor_state;
-                            break;
-                        case REG_MOTOR_CURRENT:
-                            value = current_value;
-                            break;
-                        case REG_MOTOR_STROKE:
-                            value = (uint16_t)(get_stroke_count() & 0xFFFF);
-                            break;
-                        default:
-                            break;
-                    }
-
-                    response[3 + i*2] = (value >> 8) & 0xFF;
-                    response[4 + i*2] = value & 0xFF;
-                }
-
-                response_len = 3 + quantity * 2;
-            }
-            break;
-
-        case MODBUS_FC_WRITE_SINGLE_REG:
-            if(start_address == REG_MOTOR_CONTROL) {
-                uint16_t value = (modbus_rx_buffer[4] << 8) | modbus_rx_buffer[5];
-
-                switch(value) {
-                    case 0x0001:
-                        motor_set_speed(target_speed, 0);
-                        break;
-                    case 0x0002:
-                        motor_set_speed(target_speed, 1);
-                        break;
-                    case 0x0003:
-                        motor_stop();
-                        break;
-                    case 0x0004:
-                        motor_brake();
-                        break;
-                    default:
-                        break;
-                }
-            } else if(start_address == REG_MOTOR_SPEED) {
-                target_speed = (modbus_rx_buffer[4] << 8) | modbus_rx_buffer[5];
-            }
-
-            response[0] = MODBUS_SLAVE_ID;
-            response[1] = function_code;
-            response[2] = modbus_rx_buffer[2];
-            response[3] = modbus_rx_buffer[3];
-            response[4] = modbus_rx_buffer[4];
-            response[5] = modbus_rx_buffer[5];
-            response_len = 6;
-            break;
-
-        default:
-            response[0] = MODBUS_SLAVE_ID;
-            response[1] = function_code | 0x80;
-            response[2] = MODBUS_ERR_ILLEGAL_FUNCTION;
-            response_len = 3;
-            break;
+    crc_recv = (modbus_rx_buffer[frame_len - 2] << 8) | modbus_rx_buffer[frame_len - 3];
+    crc_calc = modbus_crc(&modbus_rx_buffer[2], 2 + data_len);
+    if(crc_recv != crc_calc) {
+        for(i = 0; i < modbus_rx_len - frame_len; i++) {
+            modbus_rx_buffer[i] = modbus_rx_buffer[frame_len + i];
+        }
+        modbus_rx_len -= frame_len;
+        return;
     }
 
-    uint16_t crc = modbus_crc(response, response_len);
-    response[response_len++] = crc & 0xFF;
-    response[response_len++] = (crc >> 8) & 0xFF;
+    func = modbus_rx_buffer[2];
 
-    modbus_send_response(response, response_len);
-    modbus_rx_len = 0;
+    if(func == FC_CONTROL && data_len >= 4) {
+        cmd = (modbus_rx_buffer[4] << 8) | modbus_rx_buffer[5];
+        speed = (modbus_rx_buffer[6] << 8) | modbus_rx_buffer[7];
+
+        if(cmd == CMD_FORWARD) {
+            motor_set_speed(speed, 0);
+        } else if(cmd == CMD_REVERSE) {
+            motor_set_speed(speed, 1);
+        } else if(cmd == CMD_STOP) {
+            motor_stop_ramp();
+        }
+        modbus_upload_status();
+    }
+
+    for(i = 0; i < modbus_rx_len - frame_len; i++) {
+        modbus_rx_buffer[i] = modbus_rx_buffer[frame_len + i];
+    }
+    modbus_rx_len -= frame_len;
 }
